@@ -1,0 +1,1499 @@
+openapi: 3.0.3
+
+info:
+  title: BuryMe API
+  version: 1.0.0
+  description: |
+    Backend contract for **BuryMe** — a peer-to-peer IOU / micro-lending tracker.
+    Derived directly from PRD v2.7, §5 (Conceptual Model), §6–7 (Requirements &
+    Scenarios), §8 (Entity Attribute Reference), §11 (Dependencies & Integrations),
+    and §12 (Validation & Error Handling).
+
+    ## Architecture
+    - **Thin clients.** All business logic, persistence, and third-party integration
+      live in the Express/Node backend (§11.0). React (web) and Flutter (mobile)
+      consume this API only — neither has direct DB or third-party access.
+    - **Auth is Firebase-backed** (§11.1.2). Phone/email OTP and credential
+      management happen entirely client-side via the Firebase Auth SDK. The client
+      sends the resulting Firebase ID token as `Authorization: Bearer <token>` on
+      every request; Express verifies it via the Firebase Admin SDK. There is
+      therefore no `/login`, `/send-otp`, or `/verify-otp` endpoint here — those
+      never touch this API.
+    - **First login provisions a BuryMe user.** A valid Firebase token with no
+      matching BuryMe profile yields `404` on `GET /auth/me`; the client then calls
+      `POST /auth/register`.
+
+    ## Request vs. Obligation — the core modeling decision
+    Per §5 and §8.5/§8.6, **Request** and **Obligation** are two distinct persisted
+    resources, not two states of one resource:
+    - A **Request** (`Borrow`, `Lend`, or `Repayment`) carries the negotiable
+      proposal — amount, purpose, repayment type, proposed schedule, due date — and
+      its own lifecycle: `Pending → [Countered] → Accepted | Declined | Cancelled`.
+      Negotiation is capped at two proposals total: the original, then one counter;
+      after a counter the original sender may only accept or decline (§6.2.1).
+    - Accepting a Borrow or Lend Request **creates** an Obligation
+      (`request.obligation_id` is set at that moment). A Repayment Request instead
+      targets an *existing* Obligation from creation (`obligation_id` is set
+      immediately, not on acceptance) and does not create a new one.
+    - The **Obligation** then carries only the money lifecycle:
+      `Pending Disbursement → Active → Partially Paid → Settled`, plus `Disputed`.
+      It never re-enters a negotiation state.
+
+    Requests are unified under one resource (`POST /requests` with `request_type`
+    discriminating Borrow/Lend/Repayment) because all three share one negotiation
+    state machine (§8.5) — splitting creation into three endpoints while unifying
+    negotiation afterward would produce an inconsistent surface. A convenience
+    endpoint, `POST /obligations/{id}/repayment-requests`, wraps repayment-request
+    creation for the common obligation-scoped entry point; it is equivalent to
+    calling `POST /requests` with `request_type: Repayment` and `obligation_id`
+    pre-filled.
+
+    ## Chapa's two-hop model (§11.1.1)
+    Money never moves directly between two users. Every Chapa-mediated payment is
+    two backend-orchestrated hops against Chapa's separate APIs:
+    1. **Collect** — payer completes a Chapa checkout session (Telebirr only for
+       MVP); funds land in BuryMe's Chapa merchant balance.
+    2. **Transfer** — Express calls Chapa's Transfer API to push funds from the
+       merchant balance to the recipient's verified Telebirr account.
+
+    Both hops must succeed for a payment to be reflected as confirmed. A repayment
+    always has a collection hop (the borrower pays in) followed by a transfer hop
+    to the lender. A disbursement has **no collection hop** — the lender already
+    holds the money outside the platform in the "Already Given" sense, or is pushing
+    principal they've separately funded into their Chapa balance — so
+    `POST /obligations/{id}/disburse` triggers the Transfer hop directly. Two
+    separate webhook endpoints exist because checkout-confirmation and
+    transfer-confirmation are distinct Chapa callbacks (§11.1.1).
+
+    ## Error format (§12.3 — normative, not illustrative)
+    Every error response uses the structured envelope and standard code list
+    defined in §12.3.1–12.3.2. See `components.responses` and `Error` schema below.
+
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development
+  - url: https://api.buryme.example/v1
+    description: Production (placeholder)
+
+tags:
+  - name: Auth
+    description: Session bootstrap, first-login provisioning, device push tokens (§6.1.1, §11.1.2).
+  - name: Users
+    description: Profile, discovery, connections, Telebirr verification (§6.1.2, §6.1.3, §6.1.6).
+  - name: Requests
+    description: Unified Borrow / Lend / Repayment requests and their negotiation lifecycle (§6.2.1, §6.2.2, §6.2.4, §8.5).
+  - name: Obligations
+    description: The money lifecycle once a Request is accepted (§6.3.1, §8.6).
+  - name: Schedules
+    description: Repayment schedule and installments — fixed at agreement, read-only thereafter (§6.3.2, §8.7, §8.8).
+  - name: Payments
+    description: Chapa (two-hop) and external payment recording, acknowledgement, and disputes (§6.4.1, §6.4.2, §8.9).
+  - name: GroupExpenses
+    description: Group expense creation and the bilateral obligations it produces (§6.2.3, §8.12, §8.13).
+  - name: Settlements
+    description: Two-party net settlement suggestions (§6.5.2, §8.14).
+  - name: History
+    description: Immutable, append-only obligation event log (§6.5.1, §8.10).
+  - name: Notifications
+    description: In-app notification feed and read state (§6.1.5, §8.11).
+
+security:
+  - firebaseIdToken: []
+
+paths:
+  # ══════════════════════════════════════════════════════════════
+  # AUTH
+  # ══════════════════════════════════════════════════════════════
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get the current authenticated user
+      description: >
+        Bootstrap call on app launch. A valid Firebase token with no matching BuryMe
+        user returns `404`, signalling the client to route into registration.
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: The authenticated user's profile.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404":
+          description: Token is valid but no BuryMe user exists yet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Provision a BuryMe user on first login
+      description: >
+        Phone/email identity comes from the verified Firebase token, not the body.
+        §12.2.1 display-name constraints apply. Returns `409` if a profile already
+        exists for this identity.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: User created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "409":
+          description: A profile already exists for this identity.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/fcm-token:
+    post:
+      tags: [Auth]
+      summary: Register or refresh a device FCM token (§11.1.3)
+      operationId: registerFcmToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FcmTokenRequest" }
+      responses:
+        "204": { description: Token stored. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+    delete:
+      tags: [Auth]
+      summary: Remove a device FCM token (per-device logout)
+      operationId: deleteFcmToken
+      parameters:
+        - name: fcm_token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Removed (or was already absent). }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  # ══════════════════════════════════════════════════════════════
+  # USERS
+  # ══════════════════════════════════════════════════════════════
+  /users/search:
+    get:
+      tags: [Users]
+      summary: Search registered, verified users (§6.1.3)
+      description: >
+        Supports lookup by display name, phone, or email (§7.1.3). Returns only
+        verified, registered accounts. Min 2 / max 100 characters (§12.2.1).
+      operationId: searchUsers
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 100 }
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Matching users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserSummary" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get a user's public profile summary
+      operationId: getUser
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Public profile.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserSummary" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/me:
+    patch:
+      tags: [Users]
+      summary: Update own profile (§6.1.2)
+      description: Display name and/or profile photo. §12.2.1 constraints apply.
+      operationId: updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateProfileRequest" }
+      responses:
+        "200":
+          description: Updated profile.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /users/me/telebirr:
+    get:
+      tags: [Users]
+      summary: Get own Telebirr verification status (§8.4)
+      operationId: getTelebirr
+      responses:
+        "200":
+          description: Telebirr account state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TelebirrAccount" }
+    post:
+      tags: [Users]
+      summary: Register / re-verify a Telebirr number (§6.1.6)
+      description: >
+        Prompted contextually, not at registration. Updating the number resets
+        status to Unverified until re-verified (§7.1.6). §12.2.1 format constraints
+        apply.
+      operationId: verifyTelebirr
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyTelebirrRequest" }
+      responses:
+        "200":
+          description: Updated Telebirr account state (Unverified while verification is in progress).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TelebirrAccount" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  # ══════════════════════════════════════════════════════════════
+  # REQUESTS — unified Borrow / Lend / Repayment (§8.5)
+  # ══════════════════════════════════════════════════════════════
+  /requests:
+    get:
+      tags: [Requests]
+      summary: List requests involving the current user
+      operationId: listRequests
+      parameters:
+        - name: role
+          in: query
+          description: Filter by the current user's role on the request.
+          schema: { type: string, enum: [initiator, recipient] }
+        - name: status
+          in: query
+          description: Comma-separated RequestStatus values.
+          schema: { type: string }
+        - name: request_type
+          in: query
+          schema: { $ref: "#/components/schemas/RequestType" }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Page of requests.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RequestPage" }
+
+    post:
+      tags: [Requests]
+      summary: Create a Borrow, Lend, or Repayment request
+      description: >
+        Body shape is discriminated by `request_type`. See
+        `BorrowRequestInput` / `LendRequestInput` / `RepaymentRequestInput`.
+        §12.2.2 validation applies per type. A user cannot target themselves, and
+        Borrow/Lend cannot be created while an open request already exists between
+        the same two users in the same direction (§7.1.3, §12.2.2).
+      operationId: createRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/BorrowRequestInput"
+                - $ref: "#/components/schemas/LendRequestInput"
+                - $ref: "#/components/schemas/RepaymentRequestInput"
+              discriminator:
+                propertyName: request_type
+                mapping:
+                  Borrow: "#/components/schemas/BorrowRequestInput"
+                  Lend: "#/components/schemas/LendRequestInput"
+                  Repayment: "#/components/schemas/RepaymentRequestInput"
+      responses:
+        "201":
+          description: Request created with status `Pending`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409":
+          description: An open request already exists, or the Repayment target isn't actually overdue.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /requests/{requestId}:
+    get:
+      tags: [Requests]
+      summary: Get a request
+      operationId: getRequest
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Request detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /requests/{requestId}/counter:
+    post:
+      tags: [Requests]
+      summary: Submit the single allowed counter-proposal
+      description: >
+        Negotiation is capped at two proposals total (§6.2.1): the original, then
+        one counter. Allowed only while `status = Pending`, and only once — a
+        second counter attempt returns `409 STATUS_CONFLICT`. After a counter, only
+        the original initiator may accept or decline; the counter-submitter cannot
+        counter again.
+      operationId: counterRequest
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CounterProposalInput" }
+      responses:
+        "200":
+          description: Request updated with the counter-proposal, status `Countered`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { $ref: "#/components/responses/StatusConflict" }
+
+  /requests/{requestId}/accept:
+    post:
+      tags: [Requests]
+      summary: Accept the current terms
+      description: >
+        For Borrow/Lend: creates the Obligation and sets `request.obligation_id`.
+        The obligation enters `Active` immediately if `disbursement_method =
+        Already Given`, or `Pending Disbursement` if `Through App` (§6.3.1). For
+        Borrow specifically, `disbursement_method` is supplied by the lender at
+        acceptance (§8.5) — see `AcceptBorrowRequestInput`. For Repayment: marks
+        the request `Accepted`; the actual balance update happens when the
+        resulting payment is confirmed, not here.
+      operationId: acceptRequest
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AcceptRequestInput" }
+      responses:
+        "200":
+          description: Updated request (now `Accepted`), with `obligation_id` populated for Borrow/Lend.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "409": { $ref: "#/components/responses/StatusConflict" }
+
+  /requests/{requestId}/decline:
+    post:
+      tags: [Requests]
+      summary: Decline the request
+      operationId: declineRequest
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Request moved to `Declined`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "409": { $ref: "#/components/responses/StatusConflict" }
+
+  /requests/{requestId}/cancel:
+    post:
+      tags: [Requests]
+      summary: Withdraw a request (initiator only, while Pending)
+      operationId: cancelRequest
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Request moved to `Cancelled`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "403": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/StatusConflict" }
+
+  # ══════════════════════════════════════════════════════════════
+  # OBLIGATIONS
+  # ══════════════════════════════════════════════════════════════
+  /obligations:
+    get:
+      tags: [Obligations]
+      summary: List obligations for the current user
+      operationId: listObligations
+      parameters:
+        - name: role
+          in: query
+          schema: { type: string, enum: [lender, borrower] }
+        - name: status
+          in: query
+          description: Comma-separated ObligationStatus values.
+          schema: { type: string }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Page of obligations.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ObligationPage" }
+
+  /obligations/{obligationId}:
+    get:
+      tags: [Obligations]
+      summary: Get an obligation
+      operationId: getObligation
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      responses:
+        "200":
+          description: Obligation detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Obligation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /obligations/{obligationId}/disburse:
+    post:
+      tags: [Obligations]
+      summary: Lender completes a Through-App disbursement (§6.3.1, §11.1.1)
+      description: >
+        Valid only from `Pending Disbursement`. Triggers the Chapa Transfer hop to
+        the borrower's verified Telebirr account (no collection hop precedes a
+        disbursement). On confirmed transfer the obligation becomes `Active`.
+      operationId: disburseObligation
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      responses:
+        "202":
+          description: Transfer initiated; obligation remains `Pending Disbursement` until the transfer webhook confirms.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Obligation" }
+        "409":
+          description: Not in `Pending Disbursement`, or recipient (borrower) not yet Telebirr-verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /obligations/{obligationId}/repayment-requests:
+    post:
+      tags: [Obligations]
+      summary: Convenience wrapper — create a Repayment request against this obligation
+      description: >
+        Equivalent to `POST /requests` with `request_type: Repayment` and
+        `obligation_id` pre-filled from the path. Restricted to currently-overdue
+        amounts only (§6.2.2, §12.2.2) — a deliberate escalation distinct from
+        automated reminders (§13.3).
+      operationId: createRepaymentRequestForObligation
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RepaymentRequestBody" }
+      responses:
+        "201":
+          description: Repayment request created.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Request" }
+        "409":
+          description: Nothing on this obligation is currently overdue.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ══════════════════════════════════════════════════════════════
+  # SCHEDULES (§6.3.2, §8.7, §8.8) — read-only, fixed at agreement
+  # ══════════════════════════════════════════════════════════════
+  /obligations/{obligationId}/schedule:
+    get:
+      tags: [Schedules]
+      summary: Get the repayment schedule and installments
+      description: Present only for `repayment_type = Installments` obligations.
+      operationId: getSchedule
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      responses:
+        "200":
+          description: Repayment schedule with its installments.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RepaymentSchedule" }
+        "404":
+          description: Obligation is Lump Sum and has no schedule.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ══════════════════════════════════════════════════════════════
+  # PAYMENTS (§6.4.1, §6.4.2, §8.9)
+  # ══════════════════════════════════════════════════════════════
+  /obligations/{obligationId}/payments:
+    get:
+      tags: [Payments]
+      summary: Payment history for an obligation (§6.4.3)
+      operationId: listPayments
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      responses:
+        "200":
+          description: All payments (both directions, both methods) on this obligation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Payment" }
+
+  /obligations/{obligationId}/payments/chapa:
+    post:
+      tags: [Payments]
+      summary: Initiate a Chapa-mediated payment
+      description: >
+        `payment_direction` determines the hop(s): `Repayment` opens a Chapa
+        checkout session (collection hop; transfer to the lender follows on
+        webhook confirmation). `Disbursement` triggers the Transfer hop directly —
+        prefer `POST /obligations/{id}/disburse` for that case, which is the same
+        operation under a clearer name; this endpoint exists so both directions
+        share one Payments interface. Amount is never free-entered — it is the
+        obligation's principal, full outstanding balance, or the selected
+        installment's amount (§6.4.1, §12.2.4). Requires the recipient to have a
+        verified Telebirr account, or returns `409 RECIPIENT_UNVERIFIED`.
+      operationId: initiateChapaPayment
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InitiateChapaPaymentInput" }
+      responses:
+        "201":
+          description: Payment record created (`Pending Acknowledgement` until webhook confirms); includes checkout URL when a collection hop applies.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409":
+          description: Selected installment already paid, or recipient not Telebirr-verified.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /obligations/{obligationId}/payments/external:
+    post:
+      tags: [Payments]
+      summary: Record a payment completed outside the platform (§6.4.2)
+      description: >
+        Symmetric — either party may record, for either direction. Enters `Pending
+        Acknowledgement` until the counterparty confirms or disputes. Amount is
+        system-set, never free-entered (§12.2.4).
+      operationId: recordExternalPayment
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecordExternalPaymentInput" }
+      responses:
+        "201":
+          description: Payment recorded, `Pending Acknowledgement`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409":
+          description: Selected installment already paid.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /payments/{paymentId}/acknowledge:
+    post:
+      tags: [Payments]
+      summary: Confirm a recorded external payment
+      description: Updates the obligation's outstanding balance on confirmation (§6.4.3).
+      operationId: acknowledgePayment
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment `Confirmed`; obligation balance updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "409": { $ref: "#/components/responses/StatusConflict" }
+
+  /payments/{paymentId}/dispute:
+    post:
+      tags: [Payments]
+      summary: Dispute a recorded external payment
+      operationId: disputePayment
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment `Disputed`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "409": { $ref: "#/components/responses/StatusConflict" }
+
+  /webhooks/chapa/checkout:
+    post:
+      tags: [Payments]
+      summary: Chapa checkout (collection) confirmation callback
+      description: >
+        Server-to-server; not called by clients. Signature-verified before any
+        state change is applied (§11.1.1, §10.2). On confirmation, funds are in
+        BuryMe's merchant balance and the backend proceeds to the Transfer hop.
+      operationId: chapaCheckoutWebhook
+      security: []
+      responses:
+        "200": { description: Acknowledged. }
+
+  /webhooks/chapa/transfer:
+    post:
+      tags: [Payments]
+      summary: Chapa transfer (payout) confirmation callback
+      description: >
+        Server-to-server. On confirmation the payment is marked `Confirmed` and,
+        for a disbursement, the obligation moves `Pending Disbursement → Active`.
+      operationId: chapaTransferWebhook
+      security: []
+      responses:
+        "200": { description: Acknowledged. }
+
+  # ══════════════════════════════════════════════════════════════
+  # GROUP EXPENSES (§6.2.3, §8.12, §8.13)
+  # ══════════════════════════════════════════════════════════════
+  /group-expenses:
+    get:
+      tags: [GroupExpenses]
+      summary: List group expenses involving the current user
+      operationId: listGroupExpenses
+      parameters:
+        - name: role
+          in: query
+          schema: { type: string, enum: [payer, participant] }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Page of group expenses.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/GroupExpense" }
+                  next_cursor: { type: string, nullable: true }
+    post:
+      tags: [GroupExpenses]
+      summary: Record a group expense and spawn per-participant obligations
+      description: >
+        Creates one bilateral Obligation per participant for their assigned share.
+        No obligation is ever created for the payer's own share, even when
+        `payer_share_included` is true (§8.12). Constraints: 1–50 participants,
+        amounts must sum to the total within 0.01 ETB tolerance (§12.2.2).
+      operationId: createGroupExpense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateGroupExpenseInput" }
+      responses:
+        "201":
+          description: Group expense created with its participant obligations.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GroupExpense" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /group-expenses/{groupExpenseId}:
+    get:
+      tags: [GroupExpenses]
+      summary: Get a group expense and its participants
+      operationId: getGroupExpense
+      parameters:
+        - $ref: "#/components/parameters/GroupExpenseId"
+      responses:
+        "200":
+          description: Group expense detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GroupExpense" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ══════════════════════════════════════════════════════════════
+  # SETTLEMENTS (§6.5.2, §8.14)
+  # ══════════════════════════════════════════════════════════════
+  /settlements/suggestions:
+    get:
+      tags: [Settlements]
+      summary: List settlement suggestions involving the current user
+      operationId: listSettlementSuggestions
+      responses:
+        "200":
+          description: Suggestions involving the current user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SettlementSuggestion" }
+
+  /settlements/suggestions/{suggestionId}:
+    get:
+      tags: [Settlements]
+      summary: Get a settlement suggestion
+      operationId: getSettlementSuggestion
+      parameters:
+        - $ref: "#/components/parameters/SuggestionId"
+      responses:
+        "200":
+          description: Suggestion detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SettlementSuggestion" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /settlements/suggestions/{suggestionId}/accept:
+    post:
+      tags: [Settlements]
+      summary: Accept a settlement suggestion
+      description: >
+        Records this user's response. The suggestion's aggregate `status` becomes
+        `Accepted` — and both obligations move to `Settled` — only once both
+        `user_id_a_response` and `user_id_b_response` are `Accepted` (§8.14).
+      operationId: acceptSettlementSuggestion
+      parameters:
+        - $ref: "#/components/parameters/SuggestionId"
+      responses:
+        "200":
+          description: Updated suggestion (still `Pending` if awaiting the other party, or `Accepted`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SettlementSuggestion" }
+        "409":
+          description: One of the paired obligations was already settled by other means.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /settlements/suggestions/{suggestionId}/decline:
+    post:
+      tags: [Settlements]
+      summary: Decline a settlement suggestion
+      description: Either party declining moves the aggregate `status` to `Declined`; obligations remain unchanged.
+      operationId: declineSettlementSuggestion
+      parameters:
+        - $ref: "#/components/parameters/SuggestionId"
+      responses:
+        "200":
+          description: Suggestion `Declined`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SettlementSuggestion" }
+
+  # ══════════════════════════════════════════════════════════════
+  # HISTORY (§6.5.1, §8.10) — immutable, read-only
+  # ══════════════════════════════════════════════════════════════
+  /obligations/{obligationId}/history:
+    get:
+      tags: [History]
+      summary: Chronological, immutable event log for an obligation
+      operationId: getObligationHistory
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      responses:
+        "200":
+          description: History entries, oldest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ObligationHistoryEntry" }
+
+  # ══════════════════════════════════════════════════════════════
+  # NOTIFICATIONS (§6.1.5, §8.11)
+  # ══════════════════════════════════════════════════════════════
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get the notification feed
+      operationId: listNotifications
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Page of notifications, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Notification" }
+                  next_cursor: { type: string, nullable: true }
+
+  /notifications/read:
+    post:
+      tags: [Notifications]
+      summary: Mark notifications as read
+      operationId: markNotificationsRead
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notification_ids:
+                  type: array
+                  items: { type: string }
+                  description: Omit to mark all as read.
+      responses:
+        "204": { description: Marked read. }
+
+  /notifications/preferences:
+    patch:
+      tags: [Notifications]
+      summary: Update notification preferences (§7.1.5)
+      operationId: updateNotificationPreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotificationPreferences" }
+      responses:
+        "200":
+          description: Updated preferences.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationPreferences" }
+
+components:
+  securitySchemes:
+    firebaseIdToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Firebase ID token (1-hour expiry, §11.1.2). Verified on the backend via the
+        Firebase Admin SDK on every protected route.
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string }
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string }
+    ObligationId:
+      name: obligationId
+      in: path
+      required: true
+      schema: { type: string }
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema: { type: string }
+    GroupExpenseId:
+      name: groupExpenseId
+      in: path
+      required: true
+      schema: { type: string }
+    SuggestionId:
+      name: suggestionId
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    ValidationError:
+      description: One or more input fields failed validation (§12.3.2 `VALIDATION_ERROR`).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: The due date must be a future date.
+              field: proposed_due_date
+    Unauthenticated:
+      description: No valid session token (§12.3.2 `UNAUTHENTICATED`).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            error:
+              code: UNAUTHENTICATED
+              message: Your session has expired. Please log in again.
+    Unauthorized:
+      description: Authenticated but not a party to this record (§12.3.2 `UNAUTHORIZED`).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Record does not exist or is not accessible to this user (§12.3.2 `NOT_FOUND`).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    StatusConflict:
+      description: The record's current status does not allow this operation (§12.3.2 `STATUS_CONFLICT`).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    # ── Error envelope (§12.3.1, normative) ──────────────────────
+    ErrorCode:
+      type: string
+      description: Standard error codes per §12.3.2.
+      enum:
+        - VALIDATION_ERROR
+        - DUPLICATE_SUBMISSION
+        - STATUS_CONFLICT
+        - BALANCE_EXCEEDED
+        - CONCURRENT_MODIFICATION
+        - PAYMENT_GATEWAY_UNAVAILABLE
+        - PAYMENT_GATEWAY_ERROR
+        - RECIPIENT_UNVERIFIED
+        - PARTIAL_WRITE_ROLLED_BACK
+        - UNAUTHENTICATED
+        - UNAUTHORIZED
+        - NOT_FOUND
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { $ref: "#/components/schemas/ErrorCode" }
+            message:
+              type: string
+              description: Plain-language, user-safe. Never exposes stack traces, DB ids, or raw third-party payloads (§12.1).
+            field:
+              type: string
+              nullable: true
+              description: Present only for field-level validation errors; omitted for system errors (§12.3.1).
+
+    # ── Enums (verbatim from §8) ─────────────────────────────────
+    RequestType:
+      type: string
+      enum: [Borrow, Lend, Repayment]
+    RequestStatus:
+      type: string
+      enum: [Pending, Countered, Accepted, Declined, Cancelled]
+    RepaymentType:
+      type: string
+      enum: [Lump Sum, Installments]
+    DisbursementMethod:
+      type: string
+      enum: [Already Given, Through App]
+    ObligationStatus:
+      type: string
+      description: |
+        §8.6. `Pending Disbursement` only when disbursement_method is `Through App`,
+        between agreement and completed transfer. `Partially Paid` only for
+        Installments obligations; Lump Sum goes `Active` → `Settled` directly.
+      enum: [Pending Disbursement, Active, Partially Paid, Settled, Disputed]
+    InstallmentStatus:
+      type: string
+      enum: [Pending, Paid, Overdue]
+    ScheduleStatus:
+      type: string
+      enum: [Active, Completed]
+    PaymentDirection:
+      type: string
+      enum: [Disbursement, Repayment]
+    PaymentMethod:
+      type: string
+      enum: [Chapa, External]
+    ExternalPaymentMethodNote:
+      type: string
+      description: Method used for an externally-recorded payment (§12.2.4).
+      enum: [Cash, Bank Transfer, Mobile Money, Other]
+    PaymentStatus:
+      type: string
+      enum: [Pending Acknowledgement, Confirmed, Disputed, Failed]
+    TelebirrStatus:
+      type: string
+      enum: [Unverified, Verified]
+    SettlementResponse:
+      type: string
+      enum: [Pending, Accepted, Declined]
+    ObligationHistoryEventType:
+      type: string
+      enum: [Created, Payment Confirmed, Terms Changed, Schedule Accepted, Settled, Disputed]
+    NotificationReferenceType:
+      type: string
+      enum: [Request, Obligation, Payment]
+
+    # ── Shared value types ───────────────────────────────────────
+    Money:
+      type: object
+      description: All amounts in ETB, ≤2 decimal places (§12.1).
+      required: [amount, currency]
+      properties:
+        amount: { type: number, format: double, minimum: 0.01, maximum: 1000000, multipleOf: 0.01 }
+        currency: { type: string, default: ETB, enum: [ETB] }
+
+    # ── Auth / Users ──────────────────────────────────────────────
+    RegisterRequest:
+      type: object
+      required: [display_name]
+      properties:
+        display_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[A-Za-z0-9 _-]+$"
+          description: §12.2.1 — letters, numbers, spaces, hyphens, underscores only.
+      additionalProperties: false
+    UpdateProfileRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[A-Za-z0-9 _-]+$"
+        profile_photo_url:
+          type: string
+          nullable: true
+          description: Set via a separate photo-upload flow (multer/S3, §11.1.6); this field references the resulting URL.
+      additionalProperties: false
+    FcmTokenRequest:
+      type: object
+      required: [fcm_token, platform]
+      properties:
+        fcm_token: { type: string }
+        platform: { type: string, enum: [android, ios, web] }
+      additionalProperties: false
+    VerifyTelebirrRequest:
+      type: object
+      required: [telebirr_number]
+      properties:
+        telebirr_number:
+          type: string
+          pattern: '^(\+2519\d{8}|09\d{8})$'
+          description: §12.2.1 Ethiopian Telebirr format.
+      additionalProperties: false
+    TelebirrAccount:
+      type: object
+      properties:
+        account_id: { type: string }
+        telebirr_number: { type: string, nullable: true }
+        verification_status: { $ref: "#/components/schemas/TelebirrStatus" }
+        verified_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+    UserSummary:
+      type: object
+      properties:
+        user_id: { type: string }
+        display_name: { type: string }
+        profile_photo_url: { type: string, nullable: true }
+    User:
+      allOf:
+        - $ref: "#/components/schemas/UserSummary"
+        - type: object
+          properties:
+            identifier:
+              type: string
+              description: Email or phone used for login/search — sourced from the verified Firebase identity.
+            verification_status: { type: string, enum: [Verified] }
+            telebirr: { $ref: "#/components/schemas/TelebirrAccount" }
+            created_at: { type: string, format: date-time }
+
+    # ── Requests (§8.5) ───────────────────────────────────────────
+    ProposedScheduleInput:
+      type: object
+      description: §12.2.3 — required iff proposed_repayment_type is Installments; 2–60 entries; sum must equal the principal (0.01 ETB tolerance); dates ascending, future, ≤ overall due date.
+      required: [installments]
+      properties:
+        installments:
+          type: array
+          minItems: 2
+          maxItems: 60
+          items:
+            type: object
+            required: [amount, due_date]
+            properties:
+              amount: { $ref: "#/components/schemas/Money" }
+              due_date: { type: string, format: date }
+    BorrowRequestInput:
+      type: object
+      description: §6.2.1, §12.2.2. Lender sets disbursement_method later, at acceptance.
+      required:
+        [
+          request_type,
+          recipient_user_id,
+          amount,
+          purpose,
+          proposed_repayment_type,
+          proposed_due_date,
+        ]
+      properties:
+        request_type: { type: string, enum: [Borrow] }
+        recipient_user_id: { type: string, description: The prospective lender. }
+        amount: { $ref: "#/components/schemas/Money" }
+        purpose: { type: string, minLength: 3, maxLength: 200 }
+        proposed_repayment_type: { $ref: "#/components/schemas/RepaymentType" }
+        proposed_schedule: { $ref: "#/components/schemas/ProposedScheduleInput" }
+        proposed_due_date:
+          type: string
+          format: date
+          description: ≥1 day in the future, ≤3 years from today (§12.2.2).
+      additionalProperties: false
+    LendRequestInput:
+      type: object
+      description: §6.2.4, §12.2.2. Lender sets disbursement_method at creation.
+      required:
+        [
+          request_type,
+          recipient_user_id,
+          amount,
+          purpose,
+          proposed_repayment_type,
+          proposed_due_date,
+          disbursement_method,
+        ]
+      properties:
+        request_type: { type: string, enum: [Lend] }
+        recipient_user_id: { type: string, description: The borrower. }
+        amount: { $ref: "#/components/schemas/Money" }
+        purpose: { type: string, minLength: 3, maxLength: 200 }
+        proposed_repayment_type: { $ref: "#/components/schemas/RepaymentType" }
+        proposed_schedule: { $ref: "#/components/schemas/ProposedScheduleInput" }
+        proposed_due_date: { type: string, format: date }
+        disbursement_method: { $ref: "#/components/schemas/DisbursementMethod" }
+      additionalProperties: false
+    RepaymentRequestBody:
+      type: object
+      description: Shared body for repayment-request creation, used directly by the convenience endpoint and nested in RepaymentRequestInput.
+      required: [target]
+      properties:
+        installment_id:
+          type: string
+          nullable: true
+          description: Required (must reference a currently-Overdue installment) for Installments obligations; omit for Lump Sum.
+        note: { type: string, maxLength: 300, nullable: true }
+      additionalProperties: false
+    RepaymentRequestInput:
+      allOf:
+        - type: object
+          required: [request_type, obligation_id]
+          properties:
+            request_type: { type: string, enum: [Repayment] }
+            obligation_id:
+              type: string
+              description: Set immediately at creation (unlike Borrow/Lend, where obligation_id is set only on acceptance).
+        - $ref: "#/components/schemas/RepaymentRequestBody"
+    CounterProposalInput:
+      type: object
+      description: Same shape/validation as the original proposal for this request's type.
+      properties:
+        amount: { $ref: "#/components/schemas/Money" }
+        proposed_repayment_type: { $ref: "#/components/schemas/RepaymentType" }
+        proposed_schedule: { $ref: "#/components/schemas/ProposedScheduleInput" }
+        proposed_due_date: { type: string, format: date }
+    AcceptRequestInput:
+      type: object
+      properties:
+        disbursement_method:
+          allOf: [{ $ref: "#/components/schemas/DisbursementMethod" }]
+          description: Required only when accepting a Borrow request (the lender chooses it here); ignored otherwise.
+    Request:
+      type: object
+      properties:
+        request_id: { type: string }
+        request_type: { $ref: "#/components/schemas/RequestType" }
+        initiating_user: { $ref: "#/components/schemas/UserSummary" }
+        receiving_user: { $ref: "#/components/schemas/UserSummary" }
+        obligation_id:
+          type: string
+          nullable: true
+          description: Null until acceptance for Borrow/Lend; set immediately for Repayment.
+        amount: { $ref: "#/components/schemas/Money" }
+        purpose: { type: string, nullable: true }
+        proposed_repayment_type:
+          allOf: [{ $ref: "#/components/schemas/RepaymentType" }]
+          nullable: true
+        proposed_schedule:
+          allOf: [{ $ref: "#/components/schemas/ProposedScheduleInput" }]
+          nullable: true
+        proposed_due_date: { type: string, format: date, nullable: true }
+        disbursement_method:
+          allOf: [{ $ref: "#/components/schemas/DisbursementMethod" }]
+          nullable: true
+        counter_proposal:
+          allOf: [{ $ref: "#/components/schemas/CounterProposalInput" }]
+          nullable: true
+          description: Populated once status is Countered.
+        status: { $ref: "#/components/schemas/RequestStatus" }
+        created_at: { type: string, format: date-time }
+        responded_at: { type: string, format: date-time, nullable: true }
+    RequestPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Request" }
+        next_cursor: { type: string, nullable: true }
+
+    # ── Obligations (§8.6) ────────────────────────────────────────
+    Obligation:
+      type: object
+      properties:
+        obligation_id: { type: string }
+        borrower: { $ref: "#/components/schemas/UserSummary" }
+        lender: { $ref: "#/components/schemas/UserSummary" }
+        originating_request_id: { type: string, nullable: true }
+        originating_expense_id: { type: string, nullable: true }
+        principal_amount: { $ref: "#/components/schemas/Money" }
+        outstanding_balance:
+          allOf: [{ $ref: "#/components/schemas/Money" }]
+          description: Zero while Pending Disbursement; equals principal once disbursed; decreases in fixed increments as repayments confirm.
+        purpose: { type: string }
+        repayment_type: { $ref: "#/components/schemas/RepaymentType" }
+        disbursement_method: { $ref: "#/components/schemas/DisbursementMethod" }
+        due_date: { type: string, format: date }
+        status: { $ref: "#/components/schemas/ObligationStatus" }
+        created_at: { type: string, format: date-time }
+        settled_at: { type: string, format: date-time, nullable: true }
+    ObligationPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Obligation" }
+        next_cursor: { type: string, nullable: true }
+
+    # ── Schedules / Installments (§8.7, §8.8) ─────────────────────
+    Installment:
+      type: object
+      properties:
+        installment_id: { type: string }
+        amount: { $ref: "#/components/schemas/Money" }
+        due_date: { type: string, format: date }
+        status: { $ref: "#/components/schemas/InstallmentStatus" }
+        paid_at: { type: string, format: date-time, nullable: true }
+    RepaymentSchedule:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        obligation_id: { type: string }
+        installment_count: { type: integer }
+        status: { $ref: "#/components/schemas/ScheduleStatus" }
+        installments:
+          type: array
+          items: { $ref: "#/components/schemas/Installment" }
+        created_at: { type: string, format: date-time }
+
+    # ── Payments (§8.9) ────────────────────────────────────────────
+    InitiateChapaPaymentInput:
+      type: object
+      properties:
+        installment_id:
+          type: string
+          nullable: true
+          description: Required for a repayment on an Installments obligation; must reference a Pending/Overdue installment (§12.2.4). Omit for Lump Sum or for disbursement.
+      additionalProperties: false
+    RecordExternalPaymentInput:
+      type: object
+      required: [payment_direction, payment_date, external_method_note]
+      properties:
+        payment_direction: { $ref: "#/components/schemas/PaymentDirection" }
+        installment_id:
+          type: string
+          nullable: true
+          description: Required for a repayment on an Installments obligation; must reference a Pending/Overdue installment.
+        payment_date:
+          type: string
+          format: date
+          description: Not in the future; not before the obligation's creation date (§12.2.4).
+        external_method_note: { $ref: "#/components/schemas/ExternalPaymentMethodNote" }
+        note: { type: string, maxLength: 300, nullable: true }
+      additionalProperties: false
+    Payment:
+      type: object
+      properties:
+        payment_id: { type: string }
+        obligation_id: { type: string }
+        installment_id: { type: string, nullable: true }
+        payer: { $ref: "#/components/schemas/UserSummary" }
+        recipient: { $ref: "#/components/schemas/UserSummary" }
+        amount:
+          allOf: [{ $ref: "#/components/schemas/Money" }]
+          description: System-determined, never freely entered (§12.2.4).
+        payment_direction: { $ref: "#/components/schemas/PaymentDirection" }
+        payment_method: { $ref: "#/components/schemas/PaymentMethod" }
+        recorded_by_user_id: { type: string, nullable: true, description: External payments only. }
+        external_method_note:
+          allOf: [{ $ref: "#/components/schemas/ExternalPaymentMethodNote" }]
+          nullable: true
+        chapa_transaction_id: { type: string, nullable: true }
+        checkout_url:
+          {
+            type: string,
+            nullable: true,
+            description: Present when a Chapa collection hop is pending.,
+          }
+        status: { $ref: "#/components/schemas/PaymentStatus" }
+        recorded_at: { type: string, format: date-time }
+        confirmed_at: { type: string, format: date-time, nullable: true }
+
+    # ── Group Expenses (§8.12, §8.13) ──────────────────────────────
+    CreateGroupExpenseInput:
+      type: object
+      description: §12.2.2 — 1–50 participants; assigned amounts (+ payer's own share, if included) must sum to total within 0.01 ETB.
+      required: [total_amount, description, expense_date, payer_share_included, participants]
+      properties:
+        total_amount: { $ref: "#/components/schemas/Money" }
+        description: { type: string, minLength: 3, maxLength: 200 }
+        expense_date:
+          type: string
+          format: date
+          description: Must not be in the future.
+        payer_share_included: { type: boolean }
+        payer_share_amount:
+          allOf: [{ $ref: "#/components/schemas/Money" }]
+          nullable: true
+          description: Required when payer_share_included is true; omitted when false.
+        participants:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            required: [participant_user_id, assigned_amount]
+            properties:
+              participant_user_id: { type: string }
+              assigned_amount: { $ref: "#/components/schemas/Money" }
+      additionalProperties: false
+    GroupExpenseParticipant:
+      type: object
+      properties:
+        participant_entry_id: { type: string }
+        participant: { $ref: "#/components/schemas/UserSummary" }
+        assigned_amount: { $ref: "#/components/schemas/Money" }
+        obligation_id: { type: string }
+    GroupExpense:
+      type: object
+      properties:
+        expense_id: { type: string }
+        payer: { $ref: "#/components/schemas/UserSummary" }
+        total_amount: { $ref: "#/components/schemas/Money" }
+        description: { type: string }
+        expense_date: { type: string, format: date }
+        payer_share_included: { type: boolean }
+        payer_share_amount:
+          allOf: [{ $ref: "#/components/schemas/Money" }]
+          nullable: true
+          description: Recorded for accounting completeness only — no obligation is ever created against it.
+        participants:
+          type: array
+          items: { $ref: "#/components/schemas/GroupExpenseParticipant" }
+        created_at: { type: string, format: date-time }
+
+    # ── Settlement Suggestions (§8.14) ─────────────────────────────
+    SettlementSuggestion:
+      type: object
+      properties:
+        suggestion_id: { type: string }
+        user_a: { $ref: "#/components/schemas/UserSummary" }
+        user_b: { $ref: "#/components/schemas/UserSummary" }
+        obligation_id_a:
+          { type: string, description: Active obligation where user_a is the borrower. }
+        obligation_id_b:
+          { type: string, description: Active obligation where user_b is the borrower. }
+        net_amount: { $ref: "#/components/schemas/Money" }
+        net_payer: { $ref: "#/components/schemas/UserSummary" }
+        net_recipient: { $ref: "#/components/schemas/UserSummary" }
+        user_a_response: { $ref: "#/components/schemas/SettlementResponse" }
+        user_b_response: { $ref: "#/components/schemas/SettlementResponse" }
+        status: { $ref: "#/components/schemas/SettlementResponse" }
+        created_at: { type: string, format: date-time }
+        resolved_at: { type: string, format: date-time, nullable: true }
+
+    # ── Obligation History (§8.10) ─────────────────────────────────
+    ObligationHistoryEntry:
+      type: object
+      properties:
+        history_id: { type: string }
+        obligation_id: { type: string }
+        event_type: { $ref: "#/components/schemas/ObligationHistoryEventType" }
+        initiated_by: { $ref: "#/components/schemas/UserSummary" }
+        event_detail:
+          type: object
+          additionalProperties: true
+          description: Serialized description of the event (amounts, previous/new values, etc.).
+        occurred_at: { type: string, format: date-time }
+
+    # ── Notifications (§8.11) ──────────────────────────────────────
+    Notification:
+      type: object
+      properties:
+        notification_id: { type: string }
+        notification_type:
+          type: string
+          description: "Event that triggered the notification, e.g. New Request, Payment Confirmed, Change Proposed — see §13.2 event catalog."
+        reference_id: { type: string }
+        reference_type: { $ref: "#/components/schemas/NotificationReferenceType" }
+        is_read: { type: boolean }
+        delivered_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+    NotificationPreferences:
+      type: object
+      description: Shape intentionally minimal pending §6.1.5 UI design — extend as concrete toggles are defined.
+      properties:
+        push_enabled: { type: boolean }

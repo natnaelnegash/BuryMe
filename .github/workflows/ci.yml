@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate OpenAPI contract
+        run: npx --yes @redocly/cli lint contract/openapi.yaml
+
+      - name: Check generated types are up to date
+        run: |
+          pnpm types:generate
+          git diff --exit-code shared/src/api-types.gen.ts || \
+            (echo "::error::api-types.gen.ts is stale — run 'pnpm types:generate' and commit the result." && exit 1)
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm -r run typecheck

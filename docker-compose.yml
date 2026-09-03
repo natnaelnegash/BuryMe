@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: buryme-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: buryme
+      POSTGRES_PASSWORD: buryme_dev
+      POSTGRES_DB: buryme
+    ports:
+      - "5432:5432"
+    volumes:
+      - buryme-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buryme"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  buryme-postgres-data:
