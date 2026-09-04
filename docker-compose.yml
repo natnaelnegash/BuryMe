@@ -8,7 +8,9 @@ services:
       POSTGRES_PASSWORD: buryme_dev
       POSTGRES_DB: buryme
     ports:
-      - "5432:5432"
+      # Host port 5433, not 5432 — avoids clashing with other local Postgres
+      # containers (5432 is the common default other projects also bind to).
+      - "5433:5432"
     volumes:
       - buryme-postgres-data:/var/lib/postgresql/data
     healthcheck:

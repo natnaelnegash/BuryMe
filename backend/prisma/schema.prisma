@@ -1,0 +1,82 @@
+// BuryMe — Prisma schema.
+//
+// Scoping convention (per CLAUDE.md's vertical-slice method): models are
+// added incrementally, one slice at a time, immediately before that slice's
+// backend work begins. Do NOT pre-model entities for slices not yet started
+// — contract/openapi.yaml already fully specifies every entity, but this
+// schema deliberately lags it slice-by-slice. Each model below carries a
+// comment naming the contract/openapi.yaml component schema it maps to, so
+// drift between the two is visible at a glance.
+//
+// Currently scoped to Slice 1 (Auth) only: User, TelebirrAccount, FcmToken.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Connection URL is NOT set here — Prisma 7 moved datasource.url out of
+// schema.prisma. The CLI (generate/migrate/studio) reads it from
+// `prisma.config.ts`; the application's PrismaClient reads it via an
+// explicit driver adapter in backend/src/db/client.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// Maps to contract `User` (+ embedded `UserSummary`). `id` is the Firebase
+// UID — identity is asserted via the verified bearer token, not stored
+// separately. `verificationStatus` on the contract's User schema is
+// currently a fixed single-value enum (`Verified`) since unverified users
+// don't get a BuryMe profile at all; modeled as a plain String here pending
+// that being revisited if it ever needs to vary.
+model User {
+  id                 String   @id
+  identifier         String   @unique
+  displayName        String   @map("display_name")
+  profilePhotoUrl    String?  @map("profile_photo_url")
+  verificationStatus String   @default("Verified") @map("verification_status")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  telebirrAccount TelebirrAccount?
+  fcmTokens       FcmToken[]
+
+  @@map("users")
+}
+
+// Maps to contract `TelebirrAccount`, embedded in `User.telebirr`.
+model TelebirrAccount {
+  accountId          String         @id @default(uuid()) @map("account_id")
+  telebirrNumber     String?        @map("telebirr_number")
+  verificationStatus TelebirrStatus @default(Unverified) @map("verification_status")
+  verifiedAt         DateTime?      @map("verified_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("telebirr_accounts")
+}
+
+// Backs `POST /auth/fcm-token` (Slice 1). Not itself a named contract
+// schema — device push-token registration is described in prose (§11's FCM
+// integration) rather than as a response-body entity. `platform` mirrors
+// contract `FcmTokenRequest.platform`'s enum [android, ios, web], kept as a
+// plain String here since it's request input, not a domain state machine.
+model FcmToken {
+  id       String @id @default(uuid())
+  token    String @unique
+  platform String
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("fcm_tokens")
+}
+
+// Maps to contract `TelebirrStatus` enum exactly.
+enum TelebirrStatus {
+  Unverified
+  Verified
+}

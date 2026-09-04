@@ -16,7 +16,12 @@
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter backend run db:generate",
+    "db:migrate": "pnpm --filter backend run db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter backend run db:migrate:deploy",
+    "db:studio": "pnpm --filter backend run db:studio",
+    "db:reset": "pnpm --filter backend run db:reset"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.0.0",
