@@ -668,7 +668,7 @@ export interface components {
          * @description Standard error codes per §12.3.2.
          * @enum {string}
          */
-        ErrorCode: "VALIDATION_ERROR" | "DUPLICATE_SUBMISSION" | "STATUS_CONFLICT" | "BALANCE_EXCEEDED" | "CONCURRENT_MODIFICATION" | "PAYMENT_GATEWAY_UNAVAILABLE" | "PAYMENT_GATEWAY_ERROR" | "RECIPIENT_UNVERIFIED" | "PARTIAL_WRITE_ROLLED_BACK" | "UNAUTHENTICATED" | "UNAUTHORIZED" | "NOT_FOUND";
+        ErrorCode: "VALIDATION_ERROR" | "DUPLICATE_SUBMISSION" | "STATUS_CONFLICT" | "BALANCE_EXCEEDED" | "CONCURRENT_MODIFICATION" | "PAYMENT_GATEWAY_UNAVAILABLE" | "PAYMENT_GATEWAY_ERROR" | "RECIPIENT_UNVERIFIED" | "PARTIAL_WRITE_ROLLED_BACK" | "UNAUTHENTICATED" | "UNAUTHORIZED" | "NOT_FOUND" | "INTERNAL_ERROR";
         Error: {
             error: {
                 code: components["schemas"]["ErrorCode"];
@@ -763,7 +763,8 @@ export interface components {
             identifier?: string;
             /** @enum {string} */
             verification_status?: "Verified";
-            telebirr?: components["schemas"]["TelebirrAccount"];
+            /** @description Null until the user completes Telebirr verification (§6.1.3) — not set at registration. */
+            telebirr?: components["schemas"]["TelebirrAccount"] | null;
             /** Format: date-time */
             created_at?: string;
         };

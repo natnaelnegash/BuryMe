@@ -17,4 +17,10 @@ function required(name: string): string {
 export const env = {
   port: Number(process.env.PORT ?? 4000),
   databaseUrl: required("DATABASE_URL"),
+  firebaseProjectId: required("FIREBASE_PROJECT_ID"),
+  firebaseClientEmail: required("FIREBASE_CLIENT_EMAIL"),
+  // .env stores the PEM key with literal "\n" sequences (real newlines
+  // aren't valid in a single-line env var) — unescape them back to actual
+  // newlines for the Admin SDK's cert() call.
+  firebasePrivateKey: required("FIREBASE_PRIVATE_KEY").replace(/\\n/g, "\n"),
 };

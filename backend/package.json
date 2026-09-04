@@ -7,9 +7,9 @@
   "main": "./dist/index.js",
   "scripts": {
     "dev": "tsx --env-file=../.env watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc -b",
     "start": "node --env-file=../.env dist/index.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "postinstall": "prisma generate",
     "db:migrate:dev": "prisma migrate dev",
@@ -29,9 +29,12 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/express-serve-static-core": "^4.19.9",
     "@types/node": "^22.7.0",
+    "@types/supertest": "^7.2.1",
     "dotenv": "^16.4.5",
     "prisma": "7.10.0",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

@@ -1009,6 +1009,7 @@ components:
         - UNAUTHENTICATED
         - UNAUTHORIZED
         - NOT_FOUND
+        - INTERNAL_ERROR
     Error:
       type: object
       required: [error]
@@ -1151,7 +1152,10 @@ components:
               type: string
               description: Email or phone used for login/search — sourced from the verified Firebase identity.
             verification_status: { type: string, enum: [Verified] }
-            telebirr: { $ref: "#/components/schemas/TelebirrAccount" }
+            telebirr:
+              allOf: [{ $ref: "#/components/schemas/TelebirrAccount" }]
+              nullable: true
+              description: Null until the user completes Telebirr verification (§6.1.3) — not set at registration.
             created_at: { type: string, format: date-time }
 
     # ── Requests (§8.5) ───────────────────────────────────────────
