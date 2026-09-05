@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "./hooks/useAuth.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { RegisterPage } from "./pages/RegisterPage.js";
+import { ProfilePage } from "./pages/ProfilePage.js";
+import { SearchPage } from "./pages/SearchPage.js";
 
 function HomePage() {
   const { buryMeUser } = useAuth();
@@ -14,6 +16,9 @@ function HomePage() {
         Welcome{buryMeUser ? `, ${buryMeUser.display_name}` : ""}. Screens land per vertical slice
         (see CLAUDE.md).
       </p>
+      <nav>
+        <Link to="/profile">Profile</Link> · <Link to="/search">Find people</Link>
+      </nav>
     </main>
   );
 }
@@ -38,6 +43,22 @@ export default function App() {
         element={
           <RequireAuth>
             <HomePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth>
+            <ProfilePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <RequireAuth>
+            <SearchPage />
           </RequireAuth>
         }
       />
