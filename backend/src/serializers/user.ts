@@ -14,6 +14,14 @@ export function toTelebirrAccountResponse(account: TelebirrAccount): Schemas["Te
   };
 }
 
+export function toUserSummaryResponse(user: User): Schemas["UserSummary"] {
+  return {
+    user_id: user.id,
+    display_name: user.displayName,
+    profile_photo_url: user.profilePhotoUrl,
+  };
+}
+
 export function toUserResponse(user: UserWithTelebirr): Schemas["User"] {
   return {
     user_id: user.id,
