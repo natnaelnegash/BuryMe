@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 
 import { errorHandler } from "./middleware/errors.js";
 import { authRouter } from "./routes/auth.js";
@@ -7,6 +8,8 @@ import { authRouter } from "./routes/auth.js";
 // tests (supertest) can exercise the exact same wiring without binding a
 // real port.
 export const app = express();
+
+app.use(cors());
 
 app.use(express.json());
 
