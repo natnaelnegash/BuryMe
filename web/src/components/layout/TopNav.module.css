@@ -1,0 +1,118 @@
+/* Figma: component set "Top Nav" (31:1163), as instanced in the Screen Shell
+ * template (37:1165). Active state is the teal label plus a 24×2 underline. */
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+  padding: 0 120px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-white);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brandDot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-teal);
+}
+
+.brandName {
+  font: var(--text-amount-l);
+  color: var(--color-teal);
+}
+
+.items {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font: var(--text-nav);
+  color: var(--color-text-gray);
+}
+
+.item:hover {
+  color: var(--color-text-dark);
+  text-decoration: none;
+}
+
+.item.active {
+  font: var(--text-name);
+  color: var(--color-teal);
+}
+
+/* The underline only exists on the active item; inactive items reserve no
+ * space for it in the design (a zero-width frame), so it is simply absent. */
+.underline {
+  width: 24px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-teal);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.newButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius-input);
+  background: var(--color-teal);
+  font: var(--text-name-s);
+  color: var(--color-white);
+}
+
+.newButton:hover {
+  filter: brightness(0.96);
+  text-decoration: none;
+}
+
+.bell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-bg);
+  font-size: 16px;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-tint-teal-85);
+  color: var(--color-teal);
+  /* 17px has no named text style — the design uses it only here. */
+  font: 600 17px/normal var(--font-family);
+}

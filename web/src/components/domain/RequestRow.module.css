@@ -1,0 +1,56 @@
+/* Figma: component set "Request Row" (46:2099) — Action: Primary/Secondary/None. */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-list);
+  background: var(--color-white);
+  box-shadow: var(--elevation-subtle);
+}
+
+.textCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  font: var(--text-name);
+  color: var(--color-text-dark);
+}
+
+.detail {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.amount {
+  font: var(--text-amount-s);
+  white-space: nowrap;
+}
+
+.incoming {
+  color: var(--color-teal);
+}
+
+.outgoing {
+  color: var(--color-amber);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

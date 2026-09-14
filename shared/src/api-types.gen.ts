@@ -745,28 +745,28 @@ export interface components {
             telebirr_number: string;
         };
         TelebirrAccount: {
-            account_id?: string;
-            telebirr_number?: string | null;
-            verification_status?: components["schemas"]["TelebirrStatus"];
+            account_id: string;
+            telebirr_number: string | null;
+            verification_status: components["schemas"]["TelebirrStatus"];
             /** Format: date-time */
-            verified_at?: string | null;
+            verified_at: string | null;
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
         };
         UserSummary: {
-            user_id?: string;
-            display_name?: string;
-            profile_photo_url?: string | null;
+            user_id: string;
+            display_name: string;
+            profile_photo_url: string | null;
         };
         User: components["schemas"]["UserSummary"] & {
             /** @description Email or phone used for login/search — sourced from the verified Firebase identity. */
-            identifier?: string;
+            identifier: string;
             /** @enum {string} */
-            verification_status?: "Verified";
+            verification_status: "Verified";
             /** @description Null until the user completes Telebirr verification (§6.1.3) — not set at registration. */
-            telebirr?: components["schemas"]["TelebirrAccount"] | null;
+            telebirr: components["schemas"]["TelebirrAccount"] | null;
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
         };
         /** @description §12.2.3 — required iff proposed_repayment_type is Installments; 2–60 entries; sum must equal the principal (0.01 ETB tolerance); dates ascending, future, ≤ overall due date. */
         ProposedScheduleInput: {
@@ -843,54 +843,54 @@ export interface components {
             disbursement_method?: components["schemas"]["DisbursementMethod"];
         };
         Request: {
-            request_id?: string;
-            request_type?: components["schemas"]["RequestType"];
-            initiating_user?: components["schemas"]["UserSummary"];
-            receiving_user?: components["schemas"]["UserSummary"];
+            request_id: string;
+            request_type: components["schemas"]["RequestType"];
+            initiating_user: components["schemas"]["UserSummary"];
+            receiving_user: components["schemas"]["UserSummary"];
             /** @description Null until acceptance for Borrow/Lend; set immediately for Repayment. */
-            obligation_id?: string | null;
-            amount?: components["schemas"]["Money"];
-            purpose?: string | null;
-            proposed_repayment_type?: components["schemas"]["RepaymentType"] | null;
-            proposed_schedule?: components["schemas"]["ProposedScheduleInput"] | null;
+            obligation_id: string | null;
+            amount: components["schemas"]["Money"];
+            purpose: string | null;
+            proposed_repayment_type: components["schemas"]["RepaymentType"] | null;
+            proposed_schedule: components["schemas"]["ProposedScheduleInput"] | null;
             /** Format: date */
-            proposed_due_date?: string | null;
-            disbursement_method?: components["schemas"]["DisbursementMethod"] | null;
+            proposed_due_date: string | null;
+            disbursement_method: components["schemas"]["DisbursementMethod"] | null;
             /** @description Populated once status is Countered. */
-            counter_proposal?: components["schemas"]["CounterProposalInput"] | null;
-            status?: components["schemas"]["RequestStatus"];
+            counter_proposal: components["schemas"]["CounterProposalInput"] | null;
+            status: components["schemas"]["RequestStatus"];
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
             /** Format: date-time */
-            responded_at?: string | null;
+            responded_at: string | null;
         };
         RequestPage: {
-            data?: components["schemas"]["Request"][];
-            next_cursor?: string | null;
+            data: components["schemas"]["Request"][];
+            next_cursor: string | null;
         };
         Obligation: {
-            obligation_id?: string;
-            borrower?: components["schemas"]["UserSummary"];
-            lender?: components["schemas"]["UserSummary"];
-            originating_request_id?: string | null;
-            originating_expense_id?: string | null;
-            principal_amount?: components["schemas"]["Money"];
+            obligation_id: string;
+            borrower: components["schemas"]["UserSummary"];
+            lender: components["schemas"]["UserSummary"];
+            originating_request_id: string | null;
+            originating_expense_id: string | null;
+            principal_amount: components["schemas"]["Money"];
             /** @description Zero while Pending Disbursement; equals principal once disbursed; decreases in fixed increments as repayments confirm. */
-            outstanding_balance?: components["schemas"]["Money"];
-            purpose?: string;
-            repayment_type?: components["schemas"]["RepaymentType"];
-            disbursement_method?: components["schemas"]["DisbursementMethod"];
+            outstanding_balance: components["schemas"]["Money"];
+            purpose: string;
+            repayment_type: components["schemas"]["RepaymentType"];
+            disbursement_method: components["schemas"]["DisbursementMethod"];
             /** Format: date */
-            due_date?: string;
-            status?: components["schemas"]["ObligationStatus"];
+            due_date: string;
+            status: components["schemas"]["ObligationStatus"];
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
             /** Format: date-time */
-            settled_at?: string | null;
+            settled_at: string | null;
         };
         ObligationPage: {
-            data?: components["schemas"]["Obligation"][];
-            next_cursor?: string | null;
+            data: components["schemas"]["Obligation"][];
+            next_cursor: string | null;
         };
         Installment: {
             installment_id?: string;

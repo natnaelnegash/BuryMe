@@ -1,0 +1,51 @@
+/* Figma: component set "Avatar" (29:912) — Size × Accent. */
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 50%;
+  font-weight: 600;
+  font-family: var(--font-family);
+}
+
+/* The design scales the initial with the circle (≈0.38 of its diameter)
+ * rather than using a named text style. */
+.s40 {
+  width: 40px;
+  height: 40px;
+  font-size: 15.2px;
+}
+
+.s44 {
+  width: 44px;
+  height: 44px;
+  font-size: 16.72px;
+}
+
+.s56 {
+  width: 56px;
+  height: 56px;
+  font-size: 21.28px;
+}
+
+.teal {
+  background: var(--color-tint-teal-85);
+  color: var(--color-teal);
+}
+
+.amber {
+  background: var(--color-tint-amber-85);
+  color: var(--color-amber);
+}
+
+.indigo {
+  background: var(--color-tint-indigo-85);
+  color: var(--color-indigo);
+}
+
+.gray {
+  background: var(--color-tint-settled-85);
+  color: var(--color-settled);
+}

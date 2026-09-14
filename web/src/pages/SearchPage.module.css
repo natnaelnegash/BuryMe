@@ -1,0 +1,33 @@
+/* Figma: Screen — User Discovery (38:1533). */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.searchRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.searchRow > :first-child {
+  flex: 1;
+}
+
+.empty {
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

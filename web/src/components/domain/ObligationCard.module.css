@@ -1,0 +1,50 @@
+/* Figma: component set "Obligation Card" (46:2043) — Direction: Owed/Owe/Self. */
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-list);
+  background: var(--color-white);
+  box-shadow: var(--elevation-subtle);
+}
+
+.textCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.name {
+  font: var(--text-name);
+  color: var(--color-text-dark);
+}
+
+.subtitle {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+.amount {
+  font: var(--text-amount-m);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Direction drives the amount's colour: money coming to you reads teal,
+ * money you owe reads amber. */
+.owed {
+  color: var(--color-teal);
+}
+
+.owe {
+  color: var(--color-amber);
+}
+
+.self {
+  color: var(--color-text-gray);
+}

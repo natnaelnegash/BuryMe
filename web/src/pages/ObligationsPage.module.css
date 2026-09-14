@@ -1,0 +1,42 @@
+/* Figma: List — Obligations (27:2). */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Two cards per row, 16px both ways — the design's wrapping 1200px grid. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.cardWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rowActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.empty {
+  padding: 24px 0;
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

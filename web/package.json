@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@buryme/shared": "workspace:*",
+    "@tanstack/react-query": "^5.102.8",
     "firebase": "^10.14.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

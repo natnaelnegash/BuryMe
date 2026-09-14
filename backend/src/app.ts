@@ -4,6 +4,8 @@ import cors from "cors";
 import { errorHandler } from "./middleware/errors.js";
 import { authRouter } from "./routes/auth.js";
 import { usersRouter } from "./routes/users.js";
+import { requestsRouter } from "./routes/requests.js";
+import { obligationsRouter } from "./routes/obligations.js";
 
 // Express app construction, separated from index.ts's `listen()` call so
 // tests (supertest) can exercise the exact same wiring without binding a
@@ -22,6 +24,8 @@ app.get("/api/v1/health", (_req, res) => {
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/requests", requestsRouter);
+app.use("/api/v1/obligations", obligationsRouter);
 
 // Must be mounted last — Express only calls a 4-arg middleware as an error
 // handler when it comes after every route.

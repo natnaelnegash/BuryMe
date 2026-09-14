@@ -1,0 +1,24 @@
+/* Figma: component set "Filter Chip" (29:963) — State: Active / Inactive. */
+
+.chip {
+  padding: 8px 15px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font: var(--text-button-s);
+  white-space: nowrap;
+}
+
+.active {
+  background: var(--color-teal);
+  color: var(--color-white);
+}
+
+.inactive {
+  border-color: var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text-gray);
+}
+
+.inactive:hover {
+  color: var(--color-text-dark);
+}

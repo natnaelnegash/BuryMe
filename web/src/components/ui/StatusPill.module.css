@@ -1,0 +1,44 @@
+/* Figma: component set "Status Pill" (29:878) — Status × Size. */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.default {
+  padding: 4px 10px;
+  font: var(--text-pill);
+}
+
+.small {
+  padding: 3px 9px;
+  /* 11px Medium — the small pill's own size, not a named style. */
+  font: 500 11px/normal var(--font-family);
+}
+
+.teal {
+  background: var(--color-tint-teal-85);
+  color: var(--color-teal);
+}
+
+.amber {
+  background: var(--color-tint-amber-85);
+  color: var(--color-amber);
+}
+
+.indigo {
+  background: var(--color-tint-indigo-85);
+  color: var(--color-indigo);
+}
+
+.gray {
+  background: var(--color-tint-settled-85);
+  color: var(--color-settled);
+}
+
+.red {
+  background: var(--color-tint-red-85);
+  color: var(--color-red);
+}

@@ -8,7 +8,8 @@
 // comment naming the contract/openapi.yaml component schema it maps to, so
 // drift between the two is visible at a glance.
 //
-// Currently scoped to Slice 1 (Auth) only: User, TelebirrAccount, FcmToken.
+// Currently scoped through Slice 3 (core obligation loop): User,
+// TelebirrAccount, FcmToken (Slice 1); Request, Obligation (Slice 3).
 
 generator client {
   provider = "prisma-client"
@@ -39,6 +40,11 @@ model User {
 
   telebirrAccount TelebirrAccount?
   fcmTokens       FcmToken[]
+
+  initiatedRequests Request[]    @relation("InitiatedRequests")
+  receivedRequests  Request[]    @relation("ReceivedRequests")
+  borrowerOn        Obligation[] @relation("BorrowerObligations")
+  lenderOn          Obligation[] @relation("LenderObligations")
 
   @@map("users")
 }
@@ -79,4 +85,112 @@ model FcmToken {
 enum TelebirrStatus {
   Unverified
   Verified
+}
+
+// Maps to contract `Request` (§8.5) — the unified Borrow/Lend/Repayment
+// negotiation resource. `proposedSchedule`/`counterProposal` are stored as
+// raw JSON matching `ProposedScheduleInput`/`CounterProposalInput`'s shape
+// rather than real rows — real Installment rows are Slice 6's job; this is
+// just a proposal, not a live schedule. `installmentId` is a plain nullable
+// string (Repayment-only) for the same reason — no FK yet.
+model Request {
+  id                    String              @id @default(uuid())
+  requestType           RequestType         @map("request_type")
+  amount                Decimal             @db.Decimal(12, 2)
+  purpose               String?
+  proposedRepaymentType RepaymentType?      @map("proposed_repayment_type")
+  proposedSchedule      Json?               @map("proposed_schedule")
+  proposedDueDate       DateTime?           @map("proposed_due_date") @db.Date
+  disbursementMethod    DisbursementMethod? @map("disbursement_method")
+  counterProposal       Json?               @map("counter_proposal")
+  installmentId         String?             @map("installment_id")
+  note                  String?
+  status                RequestStatus       @default(Pending)
+  createdAt             DateTime            @default(now()) @map("created_at")
+  respondedAt           DateTime?           @map("responded_at")
+
+  initiatingUserId String @map("initiating_user_id")
+  initiatingUser   User   @relation("InitiatedRequests", fields: [initiatingUserId], references: [id])
+
+  receivingUserId String @map("receiving_user_id")
+  receivingUser   User   @relation("ReceivedRequests", fields: [receivingUserId], references: [id])
+
+  // Null until acceptance for Borrow/Lend; set immediately for Repayment.
+  obligationId String?     @map("obligation_id")
+  obligation   Obligation? @relation("RequestObligation", fields: [obligationId], references: [id])
+
+  // The Obligation this Request's acceptance created (Borrow/Lend only) —
+  // distinct from `obligation` above, which is the Repayment's target.
+  createdObligation Obligation? @relation("ObligationOrigin")
+
+  @@map("requests")
+}
+
+// Maps to contract `Obligation` (§8.6). `originating_expense_id` has no
+// column yet — the serializer hardcodes it to null until Slice 7 (Group
+// Expenses) actually creates obligations that way.
+model Obligation {
+  id                 String             @id @default(uuid())
+  principalAmount    Decimal            @map("principal_amount") @db.Decimal(12, 2)
+  outstandingBalance Decimal            @map("outstanding_balance") @db.Decimal(12, 2)
+  purpose            String
+  repaymentType      RepaymentType      @map("repayment_type")
+  disbursementMethod DisbursementMethod @map("disbursement_method")
+  dueDate            DateTime           @map("due_date") @db.Date
+  status             ObligationStatus
+  createdAt          DateTime           @default(now()) @map("created_at")
+  settledAt          DateTime?          @map("settled_at")
+
+  borrowerId String @map("borrower_id")
+  borrower   User   @relation("BorrowerObligations", fields: [borrowerId], references: [id])
+
+  lenderId String @map("lender_id")
+  lender   User   @relation("LenderObligations", fields: [lenderId], references: [id])
+
+  // The Borrow/Lend Request whose acceptance created this Obligation.
+  originatingRequestId String?  @unique @map("originating_request_id")
+  originatingRequest   Request? @relation("ObligationOrigin", fields: [originatingRequestId], references: [id])
+
+  // Repayment Requests targeting this Obligation (obligation_id set at
+  // their creation, not on acceptance).
+  repaymentRequests Request[] @relation("RequestObligation")
+
+  @@map("obligations")
+}
+
+// Maps to contract `RequestType` enum exactly.
+enum RequestType {
+  Borrow
+  Lend
+  Repayment
+}
+
+// Maps to contract `RequestStatus` enum exactly.
+enum RequestStatus {
+  Pending
+  Countered
+  Accepted
+  Declined
+  Cancelled
+}
+
+// Maps to contract `RepaymentType` enum exactly.
+enum RepaymentType {
+  LumpSum      @map("Lump Sum")
+  Installments
+}
+
+// Maps to contract `DisbursementMethod` enum exactly.
+enum DisbursementMethod {
+  AlreadyGiven @map("Already Given")
+  ThroughApp   @map("Through App")
+}
+
+// Maps to contract `ObligationStatus` enum exactly.
+enum ObligationStatus {
+  PendingDisbursement @map("Pending Disbursement")
+  Active
+  PartiallyPaid       @map("Partially Paid")
+  Settled
+  Disputed
 }

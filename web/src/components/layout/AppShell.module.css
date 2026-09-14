@@ -1,0 +1,16 @@
+/* Figma: 🧩 TEMPLATE — Screen Shell (37:1165) — nav instance + body. */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  padding: 36px 120px 72px;
+}

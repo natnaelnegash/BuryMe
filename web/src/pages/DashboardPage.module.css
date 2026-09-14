@@ -1,0 +1,139 @@
+/* Figma: Dashboard — Web (10:3). The body's 36/120/72 padding comes from
+ * AppShell; the Dashboard sets its own 24px stack gap (the shell's default
+ * is 20px). */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.greeting {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.greetingTitle {
+  font: var(--text-display);
+  color: var(--color-text-dark);
+}
+
+.greetingSubtitle {
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+/* ── Balance bar ──────────────────────────────────────────── */
+.balanceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 28px;
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--elevation-card);
+}
+
+.balanceRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.balanceCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.balanceCol.center {
+  align-items: center;
+}
+
+.balanceCol.end {
+  align-items: flex-end;
+}
+
+.balanceLabel {
+  font: var(--text-field-label);
+  color: var(--color-text-gray);
+}
+
+.balanceFigure {
+  font: var(--text-amount-xl);
+}
+
+.owedFigure {
+  color: var(--color-teal);
+}
+
+.oweFigure {
+  color: var(--color-amber);
+}
+
+/* The net figure sits between the two at a slightly smaller weight — 22px
+ * Semi Bold, which the design uses only here. */
+.netFigure {
+  font: 600 22px/normal var(--font-family);
+  color: var(--color-text-dark);
+}
+
+.barTrack {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.barOwed {
+  background: var(--color-teal);
+}
+
+.barOwe {
+  background: var(--color-amber);
+}
+
+/* ── Section headers ──────────────────────────────────────── */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.sectionHeader.spread {
+  justify-content: space-between;
+  gap: 0;
+}
+
+.sectionTitle {
+  font: var(--text-section);
+  color: var(--color-text-dark);
+}
+
+.seeAll {
+  /* 14px Medium — used only for this control. */
+  font: 500 14px/normal var(--font-family);
+  color: var(--color-teal);
+}
+
+/* ── Lists ────────────────────────────────────────────────── */
+.actionList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.obligationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.empty {
+  padding: 24px 0;
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}

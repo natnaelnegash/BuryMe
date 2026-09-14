@@ -1,0 +1,13 @@
+/* Figma: Screen — Profile Edit (38:1751). */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

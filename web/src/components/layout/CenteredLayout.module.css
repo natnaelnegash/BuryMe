@@ -1,0 +1,51 @@
+/* The narrow centred column used by Profile (49:2819, 680px), User
+ * Discovery (38:1533, 720px), Telebirr Verification (38:1694, 680px) and the
+ * request flows. Lives inside AppShell's body, so the page-level padding is
+ * already applied; this only centres and constrains the column. */
+
+.host {
+  display: flex;
+  flex-direction: column;
+  align-self: center;
+  width: 100%;
+  gap: 18px;
+}
+
+.back {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font: var(--text-link);
+  color: var(--color-text-gray);
+}
+
+.back:hover {
+  color: var(--color-text-dark);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  font: var(--text-title);
+  color: var(--color-text-dark);
+}
+
+.subtitle {
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px 28px;
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--elevation-card);
+}

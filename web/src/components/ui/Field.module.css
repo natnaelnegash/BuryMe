@@ -1,0 +1,49 @@
+/* Figma: component set "Field" (29:976) — State: Editable / Read-only. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: 7px;
+}
+
+.label {
+  font: var(--text-field-label);
+  color: var(--color-text-gray);
+}
+
+.input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  background: var(--color-white);
+  font: var(--text-field-value);
+  color: var(--color-text-dark);
+}
+
+.input::placeholder {
+  color: var(--color-text-gray);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-teal);
+}
+
+/* Read-only variant: the field-bg wash, no white input surface. */
+.readonly {
+  background: var(--color-field-bg);
+  color: var(--color-text-gray);
+}
+
+.error {
+  border-color: var(--color-red);
+}
+
+.errorText {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

@@ -1,0 +1,44 @@
+/* Figma: component set "Summary Row" (29:993) — Divider: On/Off. A
+ * label/value pair, optionally with a trailing action, that stacks with
+ * its siblings inside a card. */
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+}
+
+.divider {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.label {
+  font: var(--text-label);
+  color: var(--color-text-gray);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.value {
+  font: var(--text-value);
+  color: var(--color-text-dark);
+  text-align: right;
+}
+
+.value.teal {
+  color: var(--color-teal);
+}
+
+.value.amber {
+  color: var(--color-amber);
+}
+
+.value.gray {
+  color: var(--color-text-gray);
+}

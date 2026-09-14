@@ -1,0 +1,35 @@
+/* Figma: the "Person" rows in User Discovery (38:1578) — also the
+ * "Person Row" component set (46:2008) used by the request flows. */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-row);
+  background: var(--color-white);
+}
+
+.row.selected {
+  border-color: var(--color-teal);
+  background: var(--color-tint-teal-90);
+}
+
+.col {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font: var(--text-name-s);
+  color: var(--color-text-dark);
+}
+
+.detail {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}

@@ -1131,6 +1131,7 @@ components:
       additionalProperties: false
     TelebirrAccount:
       type: object
+      required: [account_id, telebirr_number, verification_status, verified_at, created_at]
       properties:
         account_id: { type: string }
         telebirr_number: { type: string, nullable: true }
@@ -1139,6 +1140,7 @@ components:
         created_at: { type: string, format: date-time }
     UserSummary:
       type: object
+      required: [user_id, display_name, profile_photo_url]
       properties:
         user_id: { type: string }
         display_name: { type: string }
@@ -1147,6 +1149,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/UserSummary"
         - type: object
+          required: [identifier, verification_status, telebirr, created_at]
           properties:
             identifier:
               type: string
@@ -1258,6 +1261,24 @@ components:
           description: Required only when accepting a Borrow request (the lender chooses it here); ignored otherwise.
     Request:
       type: object
+      required:
+        [
+          request_id,
+          request_type,
+          initiating_user,
+          receiving_user,
+          obligation_id,
+          amount,
+          purpose,
+          proposed_repayment_type,
+          proposed_schedule,
+          proposed_due_date,
+          disbursement_method,
+          counter_proposal,
+          status,
+          created_at,
+          responded_at,
+        ]
       properties:
         request_id: { type: string }
         request_type: { $ref: "#/components/schemas/RequestType" }
@@ -1288,6 +1309,7 @@ components:
         responded_at: { type: string, format: date-time, nullable: true }
     RequestPage:
       type: object
+      required: [data, next_cursor]
       properties:
         data:
           type: array
@@ -1297,6 +1319,23 @@ components:
     # ── Obligations (§8.6) ────────────────────────────────────────
     Obligation:
       type: object
+      required:
+        [
+          obligation_id,
+          borrower,
+          lender,
+          originating_request_id,
+          originating_expense_id,
+          principal_amount,
+          outstanding_balance,
+          purpose,
+          repayment_type,
+          disbursement_method,
+          due_date,
+          status,
+          created_at,
+          settled_at,
+        ]
       properties:
         obligation_id: { type: string }
         borrower: { $ref: "#/components/schemas/UserSummary" }
@@ -1316,6 +1355,7 @@ components:
         settled_at: { type: string, format: date-time, nullable: true }
     ObligationPage:
       type: object
+      required: [data, next_cursor]
       properties:
         data:
           type: array

@@ -1,0 +1,96 @@
+/*
+ * The shell shared by every "Auth — *" frame in Figma (37:1195 Register,
+ * 37:1252 Login, 37:1282 OTP Verification). All three are identical apart
+ * from the card's contents, so the chrome lives here once.
+ */
+
+.page {
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 96px 120px;
+  gap: 24px;
+}
+
+/* Figma: "Host" — a fixed 460px column, everything centred within it. */
+.host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 460px;
+  gap: 20px;
+}
+
+.back {
+  font: var(--text-link);
+  color: var(--color-text-gray);
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.back:hover {
+  color: var(--color-text-dark);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brandDot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-teal);
+}
+
+.brandName {
+  font: var(--text-amount-l);
+  color: var(--color-teal);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: stretch;
+  gap: 6px;
+  text-align: center;
+}
+
+.title {
+  font: var(--text-title);
+  color: var(--color-text-dark);
+}
+
+.subtitle {
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  padding: 26px 28px;
+  gap: 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--elevation-card);
+}
+
+.footer {
+  font: var(--text-link);
+  color: var(--color-text-gray);
+}
+
+.footer a {
+  color: var(--color-teal);
+}

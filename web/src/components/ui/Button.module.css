@@ -1,0 +1,88 @@
+/* Figma: component set "Button" (29:947) — Kind × Size.
+ *
+ * Note only Primary is a filled button. Secondary, Ghost and Danger are all
+ * white surfaces distinguished by their border and label colour, and
+ * Disabled uses the field-bg wash. */
+
+.wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.wrapper.block {
+  display: flex;
+  align-self: stretch;
+}
+
+.button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid transparent;
+  font: var(--text-value);
+  white-space: nowrap;
+}
+
+.wrapper.block .button {
+  width: 100%;
+}
+
+/* ── Size ─────────────────────────────────────────────────── */
+.default {
+  padding: 13px 20px;
+  border-radius: var(--radius-button);
+}
+
+.small {
+  padding: 8px 14px;
+  border-radius: var(--radius-button-sm);
+  font: var(--text-button-s);
+}
+
+/* ── Kind ─────────────────────────────────────────────────── */
+.primary {
+  border-color: transparent;
+  background: var(--color-teal);
+  color: var(--color-white);
+}
+
+.secondary {
+  border-color: var(--color-teal);
+  background: var(--color-white);
+  color: var(--color-teal);
+}
+
+.ghost {
+  border-color: var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text-gray);
+}
+
+.danger {
+  border-color: var(--color-tint-red-50);
+  background: var(--color-white);
+  color: var(--color-red);
+}
+
+.disabled,
+.button:disabled {
+  border: 1px solid var(--color-border);
+  background: var(--color-field-bg);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.button:not(:disabled):hover {
+  filter: brightness(0.97);
+}
+
+/* The reason line under an unavailable action — Figma's `Show Reason`
+ * boolean paired with its `Reason` text property. */
+.reason {
+  font: var(--text-micro);
+  color: var(--color-text-gray);
+  text-align: center;
+}

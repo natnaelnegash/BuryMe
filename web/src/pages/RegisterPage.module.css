@@ -1,0 +1,31 @@
+/* Figma: Auth — Register (37:1195) and Auth — OTP Verification (37:1282). */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resend {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+.resendButton,
+.linkButton {
+  padding: 0;
+  border: none;
+  background: none;
+  font: var(--text-link);
+  color: var(--color-teal);
+}
+
+.resendButton:hover,
+.linkButton:hover {
+  text-decoration: underline;
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}
