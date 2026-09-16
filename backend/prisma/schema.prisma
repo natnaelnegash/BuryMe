@@ -8,8 +8,9 @@
 // comment naming the contract/openapi.yaml component schema it maps to, so
 // drift between the two is visible at a glance.
 //
-// Currently scoped through Slice 3 (core obligation loop): User,
-// TelebirrAccount, FcmToken (Slice 1); Request, Obligation (Slice 3).
+// Currently scoped through Slice 4 (disbursement): User,
+// TelebirrAccount, FcmToken (Slice 1); Request, Obligation (Slice 3);
+// Payment (Slice 4).
 
 generator client {
   provider = "prisma-client"
@@ -45,6 +46,8 @@ model User {
   receivedRequests  Request[]    @relation("ReceivedRequests")
   borrowerOn        Obligation[] @relation("BorrowerObligations")
   lenderOn          Obligation[] @relation("LenderObligations")
+  paymentsMade      Payment[]    @relation("PaymentsMade")
+  paymentsReceived  Payment[]    @relation("PaymentsReceived")
 
   @@map("users")
 }
@@ -56,6 +59,15 @@ model TelebirrAccount {
   verificationStatus TelebirrStatus @default(Unverified) @map("verification_status")
   verifiedAt         DateTime?      @map("verified_at")
   createdAt          DateTime       @default(now()) @map("created_at")
+
+  // Pending OTP challenge (POST /users/me/telebirr/otp). Only a peppered
+  // hash of the code is stored; all four are cleared once verified or when
+  // the number changes. Internal state — not part of the contract's
+  // TelebirrStatus, which stays Unverified until confirmation.
+  otpHash      String?   @map("otp_hash")
+  otpExpiresAt DateTime? @map("otp_expires_at")
+  otpSentAt    DateTime? @map("otp_sent_at")
+  otpAttempts  Int       @default(0) @map("otp_attempts")
 
   userId String @unique @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -155,6 +167,8 @@ model Obligation {
   // their creation, not on acceptance).
   repaymentRequests Request[] @relation("RequestObligation")
 
+  payments Payment[]
+
   @@map("obligations")
 }
 
@@ -193,4 +207,55 @@ enum ObligationStatus {
   PartiallyPaid       @map("Partially Paid")
   Settled
   Disputed
+}
+
+// Maps to contract `Payment` (§8.9). One row per money movement on an
+// Obligation, in either direction and by either method. Slice 4 creates
+// Disbursement/Chapa rows; Slice 5 adds Repayment and External ones.
+// `installmentId` stays a plain string until Slice 6 has real rows.
+model Payment {
+  id                 String           @id @default(uuid())
+  amount             Decimal          @db.Decimal(12, 2)
+  paymentDirection   PaymentDirection @map("payment_direction")
+  paymentMethod      PaymentMethod    @map("payment_method")
+  status             PaymentStatus    @default(PendingAcknowledgement)
+  installmentId      String?          @map("installment_id")
+  recordedByUserId   String?          @map("recorded_by_user_id")
+  externalMethodNote String?          @map("external_method_note")
+  chapaTransactionId String?          @unique @map("chapa_transaction_id")
+  checkoutUrl        String?          @map("checkout_url")
+  recordedAt         DateTime         @default(now()) @map("recorded_at")
+  confirmedAt        DateTime?        @map("confirmed_at")
+
+  obligationId String     @map("obligation_id")
+  obligation   Obligation @relation(fields: [obligationId], references: [id])
+
+  payerId String @map("payer_id")
+  payer   User   @relation("PaymentsMade", fields: [payerId], references: [id])
+
+  recipientId String @map("recipient_id")
+  recipient   User   @relation("PaymentsReceived", fields: [recipientId], references: [id])
+
+  @@index([obligationId])
+  @@map("payments")
+}
+
+// Maps to contract `PaymentDirection` enum exactly.
+enum PaymentDirection {
+  Disbursement
+  Repayment
+}
+
+// Maps to contract `PaymentMethod` enum exactly.
+enum PaymentMethod {
+  Chapa
+  External
+}
+
+// Maps to contract `PaymentStatus` enum exactly.
+enum PaymentStatus {
+  PendingAcknowledgement @map("Pending Acknowledgement")
+  Confirmed
+  Disputed
+  Failed
 }

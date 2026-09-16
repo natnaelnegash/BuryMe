@@ -15,3 +15,8 @@ export const requestRepayment = (obligationId: string, body?: Schemas["Repayment
     `/obligations/${encodeURIComponent(obligationId)}/repayment-requests`,
     body ?? {},
   );
+
+// Opens the lender's Chapa checkout for a Through-App disbursement; the
+// returned Payment carries `checkout_url` to redirect to.
+export const disburseObligation = (obligationId: string) =>
+  apiClient.post<Schemas["Payment"]>(`/obligations/${encodeURIComponent(obligationId)}/disburse`);

@@ -1,0 +1,198 @@
+/* Figma: Screen — Request Response (16:66), Counter-Proposal Received
+ * (49:2500) and Negotiate Terms (16:132). */
+
+/* "R Head" (16:101): 52px avatar, name column, pill on the right. */
+.rHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rName {
+  font: var(--text-name-l);
+  color: var(--color-text-dark);
+}
+
+.rSub {
+  font: 400 13px/normal var(--font-family);
+  color: var(--color-text-gray);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+}
+
+.groupLabel {
+  font: var(--text-field-label);
+  color: var(--color-text-gray);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* "Btn Row" on these screens has no top padding (unlike the flows). */
+.btnRow {
+  display: flex;
+  gap: 12px;
+}
+
+.btnRow > * {
+  flex: 1;
+}
+
+/* ── Negotiate Terms ── */
+
+.counterForm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* "Compare" (16:166): two 372px cards, gap 16. */
+.compare {
+  display: flex;
+  gap: 16px;
+}
+
+.theirs,
+.yours {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--color-white);
+}
+
+.theirs {
+  gap: 8px;
+  box-shadow: var(--elevation-card);
+}
+
+.yours {
+  gap: 12px;
+  border: 2px solid var(--color-teal);
+}
+
+.overline {
+  font: var(--text-overline);
+  color: var(--color-text-gray);
+  text-transform: uppercase;
+}
+
+.overlineTeal {
+  color: var(--color-teal);
+}
+
+.selectField {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.select {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  background: var(--color-white);
+  font: var(--text-field-value);
+  color: var(--color-text-dark);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-teal);
+}
+
+/* "Counter Schedule" (78:1310): full-width teal-bordered card. */
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 2px solid var(--color-teal);
+  border-radius: 16px;
+  background: var(--color-white);
+}
+
+.scheduleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+}
+
+.scheduleActions {
+  display: flex;
+  gap: 8px;
+}
+
+.instRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.instLabel {
+  flex: none;
+  width: 110px;
+  font: var(--text-name-s);
+  color: var(--color-text-dark);
+}
+
+.instInput {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  background: var(--color-white);
+  font: var(--text-field-value);
+  color: var(--color-text-dark);
+}
+
+.instInput:focus {
+  outline: none;
+  border-color: var(--color-teal);
+}
+
+.instRemove {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  font: 400 20px/1 var(--font-family);
+  color: var(--color-text-gray);
+  cursor: pointer;
+}
+
+.instRemove:hover {
+  background: var(--color-field-bg);
+  color: var(--color-text-dark);
+}
+
+.muted {
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

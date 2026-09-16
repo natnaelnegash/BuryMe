@@ -238,3 +238,10 @@ export function parseBody<T>(schema: ZodType<T>, body: unknown): T {
   }
   return result.data;
 }
+
+// POST /users/me/telebirr/verify body — contract ConfirmTelebirrOtpRequest.
+export const confirmTelebirrOtpRequestSchema = z
+  .object({
+    code: z.string().regex(/^\d{6}$/),
+  })
+  .strict();

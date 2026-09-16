@@ -1,9 +1,12 @@
+import type { Schemas } from "@buryme/shared";
 import { Router } from "express";
 
 import { prisma } from "../db/client.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
+import { confirmChallenge, issueChallenge } from "../lib/telebirrOtp.js";
 import {
+  confirmTelebirrOtpRequestSchema,
   parseBody,
   searchUsersQuerySchema,
   updateProfileRequestSchema,
@@ -77,10 +80,10 @@ usersRouter.get("/me/telebirr", async (req, res, next) => {
   }
 });
 
-// POST /users/me/telebirr — contract: verifyTelebirr. Updating the number
-// always resets status to Unverified until re-verified (§7.1.6) — this
-// slice has no separate verification-confirmation mechanism, matching the
-// contract's documented behavior exactly.
+// POST /users/me/telebirr — contract: verifyTelebirr. Saves the number and
+// resets status to Unverified (§7.1.6); any in-flight OTP challenge is
+// dropped since it was issued for the old number. Verification proper is
+// the /otp + /verify pair below.
 usersRouter.post("/me/telebirr", async (req, res, next) => {
   try {
     const body = parseBody(verifyTelebirrRequestSchema, req.body);
@@ -91,9 +94,47 @@ usersRouter.post("/me/telebirr", async (req, res, next) => {
         telebirrNumber: body.telebirr_number,
         verificationStatus: "Unverified",
         verifiedAt: null,
+        otpHash: null,
+        otpExpiresAt: null,
+        otpSentAt: null,
+        otpAttempts: 0,
       },
     });
     res.status(200).json(toTelebirrAccountResponse(account));
+  } catch (err) {
+    next(err);
+  }
+});
+
+async function findOwnTelebirrAccount(uid: string) {
+  const account = await prisma.telebirrAccount.findUnique({ where: { userId: uid } });
+  if (!account) {
+    throw new ApiError("STATUS_CONFLICT", "Save a Telebirr number before verifying it.", 409);
+  }
+  return account;
+}
+
+// POST /users/me/telebirr/otp — contract: sendTelebirrOtp.
+usersRouter.post("/me/telebirr/otp", async (req, res, next) => {
+  try {
+    const account = await findOwnTelebirrAccount(req.auth!.uid);
+    const challenge = await issueChallenge(account);
+    res.status(200).json({
+      expires_at: challenge.expiresAt.toISOString(),
+      resend_available_at: challenge.resendAvailableAt.toISOString(),
+    } satisfies Schemas["TelebirrOtpChallenge"]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /users/me/telebirr/verify — contract: confirmTelebirrOtp.
+usersRouter.post("/me/telebirr/verify", async (req, res, next) => {
+  try {
+    const body = parseBody(confirmTelebirrOtpRequestSchema, req.body);
+    const account = await findOwnTelebirrAccount(req.auth!.uid);
+    const verified = await confirmChallenge(account, body.code);
+    res.status(200).json(toTelebirrAccountResponse(verified));
   } catch (err) {
     next(err);
   }

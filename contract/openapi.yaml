@@ -56,14 +56,18 @@ info:
     2. **Transfer** — Express calls Chapa's Transfer API to push funds from the
        merchant balance to the recipient's verified Telebirr account.
 
-    Both hops must succeed for a payment to be reflected as confirmed. A repayment
-    always has a collection hop (the borrower pays in) followed by a transfer hop
-    to the lender. A disbursement has **no collection hop** — the lender already
-    holds the money outside the platform in the "Already Given" sense, or is pushing
-    principal they've separately funded into their Chapa balance — so
-    `POST /obligations/{id}/disburse` triggers the Transfer hop directly. Two
-    separate webhook endpoints exist because checkout-confirmation and
-    transfer-confirmation are distinct Chapa callbacks (§11.1.1).
+    Both hops must succeed for a payment to be reflected as confirmed, and BuryMe's
+    merchant balance is only ever a pass-through — the platform never funds either
+    side. A repayment collects from the borrower and transfers to the lender. A
+    Through-App disbursement collects from the **lender** (`POST
+    /obligations/{id}/disburse` opens the lender's checkout session) and, once the
+    checkout webhook confirms the funds landed, transfers to the borrower's verified
+    Telebirr; the obligation becomes `Active` only when the transfer webhook
+    confirms. The one Chapa-free path is `disbursement_method: Already Given`,
+    where the lender handed the money over outside the platform and the obligation
+    is `Active` from creation. Two separate webhook endpoints exist because
+    checkout-confirmation and transfer-confirmation are distinct Chapa callbacks
+    (§11.1.1).
 
     ## Error format (§12.3 — normative, not illustrative)
     Every error response uses the structured envelope and standard code list
@@ -267,11 +271,74 @@ paths:
             schema: { $ref: "#/components/schemas/VerifyTelebirrRequest" }
       responses:
         "200":
-          description: Updated Telebirr account state (Unverified while verification is in progress).
+          description: >
+            Updated Telebirr account state (Unverified while verification is in
+            progress). Call `POST /users/me/telebirr/otp` next to start OTP
+            verification of the saved number.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TelebirrAccount" }
         "400": { $ref: "#/components/responses/ValidationError" }
+
+  /users/me/telebirr/otp:
+    post:
+      tags: [Users]
+      summary: Send (or resend) a verification code to the saved Telebirr number
+      description: >
+        Sends a fresh 6-digit one-time code by SMS to the `telebirr_number`
+        recorded via `POST /users/me/telebirr`. Codes expire after 5 minutes;
+        a new code may be requested at most once per 60 seconds and replaces
+        any earlier one. Ownership of a Telebirr number is proven by receiving
+        this SMS — Chapa's integration does not verify account ownership.
+      operationId: sendTelebirrOtp
+      responses:
+        "200":
+          description: Code sent.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TelebirrOtpChallenge" }
+        "409":
+          description: No Telebirr number is saved yet, or the account is already Verified (`STATUS_CONFLICT`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: A code was sent less than 60 seconds ago (`DUPLICATE_SUBMISSION`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /users/me/telebirr/verify:
+    post:
+      tags: [Users]
+      summary: Confirm the Telebirr verification code
+      description: >
+        Checks the code against the pending challenge. On success the account
+        becomes `Verified` and `verified_at` is set. Five wrong attempts
+        invalidate the challenge; request a new code with
+        `POST /users/me/telebirr/otp`.
+      operationId: confirmTelebirrOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConfirmTelebirrOtpRequest" }
+      responses:
+        "200":
+          description: Telebirr account now `Verified`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TelebirrAccount" }
+        "400":
+          description: Wrong or expired code (`VALIDATION_ERROR`, field `code`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: No verification is pending, attempts are exhausted, or the account is already Verified (`STATUS_CONFLICT`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   # ══════════════════════════════════════════════════════════════
   # REQUESTS — unified Borrow / Lend / Repayment (§8.5)
@@ -483,22 +550,42 @@ paths:
   /obligations/{obligationId}/disburse:
     post:
       tags: [Obligations]
-      summary: Lender completes a Through-App disbursement (§6.3.1, §11.1.1)
+      summary: Lender starts a Through-App disbursement (§6.3.1, §11.1.1)
       description: >
-        Valid only from `Pending Disbursement`. Triggers the Chapa Transfer hop to
-        the borrower's verified Telebirr account (no collection hop precedes a
-        disbursement). On confirmed transfer the obligation becomes `Active`.
+        Valid only from `Pending Disbursement`, lender only. Creates a
+        `Disbursement` / `Chapa` Payment (`Pending Acknowledgement`) and opens a
+        Chapa checkout session for the **lender** to pay the principal in
+        (collection hop) — the client redirects the lender to `checkout_url`.
+        When the checkout webhook confirms the funds, the backend triggers the
+        Transfer hop to the borrower's verified Telebirr; when the transfer
+        webhook confirms, the obligation becomes `Active` with
+        `outstanding_balance = principal_amount`. Until then it stays
+        `Pending Disbursement`. A `Failed` payment may be retried by calling
+        this again.
       operationId: disburseObligation
       parameters:
         - $ref: "#/components/parameters/ObligationId"
       responses:
-        "202":
-          description: Transfer initiated; obligation remains `Pending Disbursement` until the transfer webhook confirms.
+        "201":
+          description: Payment created with a live `checkout_url`; obligation remains `Pending Disbursement`.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Obligation" }
+              schema: { $ref: "#/components/schemas/Payment" }
+        "403":
+          description: Caller is not the lender (`UNAUTHORIZED`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "409":
-          description: Not in `Pending Disbursement`, or recipient (borrower) not yet Telebirr-verified.
+          description: >
+            Not in `Pending Disbursement` (`STATUS_CONFLICT`), borrower not yet
+            Telebirr-verified (`RECIPIENT_UNVERIFIED`), or a disbursement payment
+            is already in progress (`DUPLICATE_SUBMISSION`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "502":
+          description: Chapa could not open the checkout session (`PAYMENT_GATEWAY_ERROR`); the payment is marked `Failed`.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -579,10 +666,11 @@ paths:
       tags: [Payments]
       summary: Initiate a Chapa-mediated payment
       description: >
-        `payment_direction` determines the hop(s): `Repayment` opens a Chapa
-        checkout session (collection hop; transfer to the lender follows on
-        webhook confirmation). `Disbursement` triggers the Transfer hop directly —
-        prefer `POST /obligations/{id}/disburse` for that case, which is the same
+        Both directions open a Chapa checkout session for the payer (collection
+        hop; the transfer to the recipient follows on webhook confirmation):
+        `Repayment` collects from the borrower and pays the lender,
+        `Disbursement` collects from the lender and pays the borrower. Prefer
+        `POST /obligations/{id}/disburse` for the latter — it is the same
         operation under a clearer name; this endpoint exists so both directions
         share one Payments interface. Amount is never free-entered — it is the
         obligation's principal, full outstanding balance, or the selected
@@ -676,7 +764,10 @@ paths:
       description: >
         Server-to-server; not called by clients. Signature-verified before any
         state change is applied (§11.1.1, §10.2). On confirmation, funds are in
-        BuryMe's merchant balance and the backend proceeds to the Transfer hop.
+        BuryMe's merchant balance and the backend proceeds to the Transfer hop —
+        to the borrower for a `Disbursement` payment, to the lender for a
+        `Repayment`. The Payment stays `Pending Acknowledgement` until the
+        transfer webhook confirms; a failed checkout marks it `Failed`.
       operationId: chapaCheckoutWebhook
       security: []
       responses:
@@ -1128,6 +1219,28 @@ components:
           type: string
           pattern: '^(\+2519\d{8}|09\d{8})$'
           description: §12.2.1 Ethiopian Telebirr format.
+      additionalProperties: false
+    TelebirrOtpChallenge:
+      type: object
+      description: State of the verification code just sent by `POST /users/me/telebirr/otp`. The code itself is never returned.
+      required: [expires_at, resend_available_at]
+      properties:
+        expires_at:
+          type: string
+          format: date-time
+          description: When the code stops being accepted (5 minutes after sending).
+        resend_available_at:
+          type: string
+          format: date-time
+          description: Earliest time a new code may be requested (60 seconds after sending).
+    ConfirmTelebirrOtpRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          pattern: '^\d{6}$'
+          description: The 6-digit code received by SMS.
       additionalProperties: false
     TelebirrAccount:
       type: object

@@ -1,0 +1,36 @@
+/* Figma: Screen — Telebirr Verification · Code (66:855). */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resend {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+.resendButton {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font: var(--text-link);
+  color: var(--color-teal);
+}
+
+.resendButton:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

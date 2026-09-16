@@ -64,7 +64,11 @@ export function LoginPage() {
             on how reset should actually work (likely phone OTP re-verification). */}
         <span className={styles.forgot}>Forgot password?</span>
 
-        {error && <p role="alert" className={styles.error}>{error}</p>}
+        {error && (
+          <p role="alert" className={styles.error}>
+            {error}
+          </p>
+        )}
 
         <Button type="submit" block disabled={submitting}>
           {submitting ? "Logging in…" : "Log in"}

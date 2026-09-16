@@ -48,3 +48,12 @@
 .self {
   color: var(--color-text-gray);
 }
+
+.link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link:hover {
+  box-shadow: var(--elevation-card);
+}

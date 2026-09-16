@@ -1,0 +1,99 @@
+/* Figma: Flow — Borrow Request (15:2 / 15:79 / 15:146) and
+ * Flow — Lending Record (15:208 … 15:409). */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* "Btn Row" — 6px of top padding, two FILL buttons 12 apart. */
+.btnRow {
+  display: flex;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.btnRow > * {
+  flex: 1;
+}
+
+.groupLabel {
+  font: var(--text-field-label);
+  color: var(--color-text-gray);
+}
+
+/* "Schedule Header" (77:1269). */
+.scheduleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+}
+
+.scheduleActions {
+  display: flex;
+  gap: 8px;
+}
+
+/* "Inst Editor N" (77:1274): fixed 110px label, two FILL inputs, gap 12. */
+.instRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.instLabel {
+  flex: none;
+  width: 110px;
+  font: var(--text-name-s);
+  color: var(--color-text-dark);
+}
+
+.instInput {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  background: var(--color-white);
+  font: var(--text-field-value);
+  color: var(--color-text-dark);
+}
+
+.instInput:focus {
+  outline: none;
+  border-color: var(--color-teal);
+}
+
+.instRemove {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  font: 400 20px/1 var(--font-family);
+  color: var(--color-text-gray);
+  cursor: pointer;
+}
+
+.instRemove:hover {
+  background: var(--color-field-bg);
+  color: var(--color-text-dark);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty {
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

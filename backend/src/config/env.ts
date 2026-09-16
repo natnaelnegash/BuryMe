@@ -23,4 +23,7 @@ export const env = {
   // aren't valid in a single-line env var) — unescape them back to actual
   // newlines for the Admin SDK's cert() call.
   firebasePrivateKey: required("FIREBASE_PRIVATE_KEY").replace(/\\n/g, "\n"),
+  // AfroMessage + OTP pepper live in config/sms.ts and config/otp.ts — read
+  // lazily there so route tests (which mock the DB and Firebase) don't need
+  // the full env to import them.
 };

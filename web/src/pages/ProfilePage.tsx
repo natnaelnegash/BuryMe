@@ -47,15 +47,31 @@ export function ProfilePage() {
         <SummaryRow label="Phone number" value={buryMeUser.identifier} />
         <SummaryRow
           label="Telebirr"
-          value={telebirrVerified ? "Verified" : telebirr?.telebirr_number ? "Not verified" : "Not linked"}
+          value={
+            telebirrVerified
+              ? "Verified"
+              : telebirr?.telebirr_number
+                ? "Not verified"
+                : "Not linked"
+          }
           tone={telebirrVerified ? "teal" : "gray"}
           action={
+            // A saved-but-unverified number's useful action is finishing
+            // verification — the number screen re-sends a code on submit.
             <Button kind="secondary" size="small" onClick={() => navigate("/profile/telebirr")}>
-              {telebirr?.telebirr_number ? "Change number" : "Link number"}
+              {!telebirr?.telebirr_number
+                ? "Link number"
+                : telebirrVerified
+                  ? "Change number"
+                  : "Verify now"}
             </Button>
           }
         />
-        <SummaryRow label="Member since" value={memberSince(buryMeUser.created_at)} divider={false} />
+        <SummaryRow
+          label="Member since"
+          value={memberSince(buryMeUser.created_at)}
+          divider={false}
+        />
       </div>
 
       <div className={styles.actions}>

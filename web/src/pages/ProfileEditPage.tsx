@@ -40,7 +40,12 @@ export function ProfileEditPage() {
     : null;
 
   return (
-    <CenteredLayout title="Edit profile" subtitle="Change how your name appears to others." width={680} back>
+    <CenteredLayout
+      title="Edit profile"
+      subtitle="Change how your name appears to others."
+      width={680}
+      back
+    >
       <form className={styles.form} onSubmit={handleSubmit}>
         <Field
           label="Full name"

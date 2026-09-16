@@ -125,11 +125,13 @@ export function RegisterPage() {
           <OtpInput value={otp} onChange={setOtp} />
 
           {secondsLeft > 0 ? (
-            <p className={styles.resend}>
-              Resend code in 0:{String(secondsLeft).padStart(2, "0")}
-            </p>
+            <p className={styles.resend}>Resend code in 0:{String(secondsLeft).padStart(2, "0")}</p>
           ) : (
-            <button type="button" className={styles.resendButton} onClick={() => void handleResend()}>
+            <button
+              type="button"
+              className={styles.resendButton}
+              onClick={() => void handleResend()}
+            >
               Resend code
             </button>
           )}

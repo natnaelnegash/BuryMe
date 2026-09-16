@@ -32,7 +32,8 @@ export function OtpInput({ value, onChange, length = 6 }: OtpInputProps) {
             value={digit.trim()}
             onChange={(e) => setDigit(i, e.target.value.replace(/\D/g, "").slice(-1))}
             onKeyDown={(e) => {
-              if (e.key === "Backspace" && !digit.trim() && i > 0) inputsRef.current[i - 1]?.focus();
+              if (e.key === "Backspace" && !digit.trim() && i > 0)
+                inputsRef.current[i - 1]?.focus();
             }}
             inputMode="numeric"
             autoComplete={i === 0 ? "one-time-code" : "off"}

@@ -1,8 +1,11 @@
+import { Link } from "react-router-dom";
+
+import { PILL_BY_STATUS, type ObligationDirection } from "../../lib/obligations.js";
 import { Avatar, type AvatarAccent } from "../ui/Avatar.js";
-import { StatusPill, type PillStatus } from "../ui/StatusPill.js";
+import { StatusPill } from "../ui/StatusPill.js";
 import styles from "./ObligationCard.module.css";
 
-export type ObligationDirection = "owed" | "owe" | "self";
+export type { ObligationDirection };
 
 interface ObligationCardProps {
   name: string;
@@ -10,6 +13,8 @@ interface ObligationCardProps {
   amount: string;
   status: string;
   direction: ObligationDirection;
+  /** Route to the obligation's detail screen; makes the card a link. */
+  to?: string;
 }
 
 const ACCENT_BY_DIRECTION: Record<ObligationDirection, AvatarAccent> = {
@@ -18,24 +23,16 @@ const ACCENT_BY_DIRECTION: Record<ObligationDirection, AvatarAccent> = {
   self: "gray",
 };
 
-// Obligation status → the pill colour the design uses for it.
-const PILL_BY_STATUS: Record<string, PillStatus> = {
-  Active: "teal",
-  "Pending Disbursement": "indigo",
-  "Partially Paid": "amber",
-  Settled: "gray",
-  Disputed: "red",
-};
-
 export function ObligationCard({
   name,
   subtitle,
   amount,
   status,
   direction,
+  to,
 }: ObligationCardProps) {
-  return (
-    <article className={styles.card}>
+  const body = (
+    <>
       <Avatar name={name} size={44} accent={ACCENT_BY_DIRECTION[direction]} />
       <div className={styles.textCol}>
         <span className={styles.name}>{name}</span>
@@ -45,6 +42,15 @@ export function ObligationCard({
         </StatusPill>
       </div>
       <span className={[styles.amount, styles[direction]].join(" ")}>{amount}</span>
-    </article>
+    </>
   );
+
+  if (to) {
+    return (
+      <Link to={to} className={[styles.card, styles.link].join(" ")}>
+        {body}
+      </Link>
+    );
+  }
+  return <article className={styles.card}>{body}</article>;
 }

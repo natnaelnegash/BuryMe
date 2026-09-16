@@ -17,3 +17,9 @@ export const getTelebirr = () => apiClient.get<Schemas["TelebirrAccount"]>("/use
 
 export const verifyTelebirr = (body: Schemas["VerifyTelebirrRequest"]) =>
   apiClient.post<Schemas["TelebirrAccount"]>("/users/me/telebirr", body);
+
+export const sendTelebirrOtp = () =>
+  apiClient.post<Schemas["TelebirrOtpChallenge"]>("/users/me/telebirr/otp");
+
+export const confirmTelebirrOtp = (body: Schemas["ConfirmTelebirrOtpRequest"]) =>
+  apiClient.post<Schemas["TelebirrAccount"]>("/users/me/telebirr/verify", body);

@@ -8,43 +8,48 @@ import { Field } from "../components/ui/Field.js";
 import { Note } from "../components/ui/Note.js";
 import { SummaryRow } from "../components/ui/SummaryRow.js";
 import { useAuth } from "../hooks/useAuth.js";
-import { useVerifyTelebirr } from "../hooks/useUsers.js";
+import { useSendTelebirrOtp, useVerifyTelebirr } from "../hooks/useUsers.js";
 import styles from "./TelebirrPage.module.css";
 
-// Figma: Screen — Telebirr Verification (38:1694).
-//
-// The design's primary action reads "Send verification code" and leads to a
-// code-entry screen (66:855). That OTP step has no backend yet — the API's
-// POST /users/me/telebirr only records the number and resets its status to
-// Unverified — so the button is labelled for what it actually does today.
-// The full OTP flow is tracked as future work.
+// Figma: Screen — Telebirr Verification (38:1694). Saves the number
+// (POST /users/me/telebirr), asks the backend to SMS a code
+// (POST /users/me/telebirr/otp), then hands off to the code-entry screen.
 export function TelebirrPage() {
   const navigate = useNavigate();
   const { buryMeUser, refetch } = useAuth();
   const [telebirrNumber, setTelebirrNumber] = useState(buryMeUser?.telebirr?.telebirr_number ?? "");
-  const verify = useVerifyTelebirr();
+  const save = useVerifyTelebirr();
+  const sendOtp = useSendTelebirrOtp();
 
   if (!buryMeUser) return null;
 
-  const current = verify.data ?? buryMeUser.telebirr;
+  const current = buryMeUser.telebirr;
   const status = current?.verification_status === "Verified" ? "Verified" : "Not verified";
+  const pending = save.isPending || sendOtp.isPending;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    verify.mutate(
+    save.mutate(
       { telebirr_number: telebirrNumber },
       {
-        onSuccess: async () => {
-          await refetch();
-          navigate("/profile");
+        onSuccess: () => {
+          sendOtp.mutate(undefined, {
+            onSuccess: async (challenge) => {
+              await refetch();
+              navigate("/profile/telebirr/verify", {
+                state: { resendAvailableAt: challenge.resend_available_at },
+              });
+            },
+          });
         },
       },
     );
   }
 
-  const error = verify.isError
-    ? verify.error instanceof ApiError
-      ? verify.error.message
+  const failure = save.error ?? sendOtp.error;
+  const error = failure
+    ? failure instanceof ApiError
+      ? failure.message
       : "Something went wrong."
     : null;
 
@@ -76,13 +81,17 @@ export function TelebirrPage() {
         </div>
 
         <Note color="indigo">
-          Verification by SMS code is not available yet — saving links the number to your
-          account so it is ready once it is.
+          We&rsquo;ll text a 6-digit code to this number to confirm it&rsquo;s yours. Changing a
+          verified number means verifying it again.
         </Note>
 
         <div className={styles.actions}>
-          <Button type="submit" block disabled={verify.isPending}>
-            {verify.isPending ? "Saving…" : "Save Telebirr number"}
+          <Button type="submit" block disabled={pending}>
+            {save.isPending
+              ? "Saving…"
+              : sendOtp.isPending
+                ? "Sending code…"
+                : "Send verification code"}
           </Button>
           <Button type="button" kind="ghost" block onClick={() => navigate("/profile")}>
             Cancel

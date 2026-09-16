@@ -140,6 +140,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/telebirr/otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send (or resend) a verification code to the saved Telebirr number
+         * @description Sends a fresh 6-digit one-time code by SMS to the `telebirr_number` recorded via `POST /users/me/telebirr`. Codes expire after 5 minutes; a new code may be requested at most once per 60 seconds and replaces any earlier one. Ownership of a Telebirr number is proven by receiving this SMS — Chapa's integration does not verify account ownership.
+         */
+        post: operations["sendTelebirrOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/telebirr/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the Telebirr verification code
+         * @description Checks the code against the pending challenge. On success the account becomes `Verified` and `verified_at` is set. Five wrong attempts invalidate the challenge; request a new code with `POST /users/me/telebirr/otp`.
+         */
+        post: operations["confirmTelebirrOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests": {
         parameters: {
             query?: never;
@@ -296,8 +336,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Lender completes a Through-App disbursement (§6.3.1, §11.1.1)
-         * @description Valid only from `Pending Disbursement`. Triggers the Chapa Transfer hop to the borrower's verified Telebirr account (no collection hop precedes a disbursement). On confirmed transfer the obligation becomes `Active`.
+         * Lender starts a Through-App disbursement (§6.3.1, §11.1.1)
+         * @description Valid only from `Pending Disbursement`, lender only. Creates a `Disbursement` / `Chapa` Payment (`Pending Acknowledgement`) and opens a Chapa checkout session for the **lender** to pay the principal in (collection hop) — the client redirects the lender to `checkout_url`. When the checkout webhook confirms the funds, the backend triggers the Transfer hop to the borrower's verified Telebirr; when the transfer webhook confirms, the obligation becomes `Active` with `outstanding_balance = principal_amount`. Until then it stays `Pending Disbursement`. A `Failed` payment may be retried by calling this again.
          */
         post: operations["disburseObligation"];
         delete?: never;
@@ -374,7 +414,7 @@ export interface paths {
         put?: never;
         /**
          * Initiate a Chapa-mediated payment
-         * @description `payment_direction` determines the hop(s): `Repayment` opens a Chapa checkout session (collection hop; transfer to the lender follows on webhook confirmation). `Disbursement` triggers the Transfer hop directly — prefer `POST /obligations/{id}/disburse` for that case, which is the same operation under a clearer name; this endpoint exists so both directions share one Payments interface. Amount is never free-entered — it is the obligation's principal, full outstanding balance, or the selected installment's amount (§6.4.1, §12.2.4). Requires the recipient to have a verified Telebirr account, or returns `409 RECIPIENT_UNVERIFIED`.
+         * @description Both directions open a Chapa checkout session for the payer (collection hop; the transfer to the recipient follows on webhook confirmation): `Repayment` collects from the borrower and pays the lender, `Disbursement` collects from the lender and pays the borrower. Prefer `POST /obligations/{id}/disburse` for the latter — it is the same operation under a clearer name; this endpoint exists so both directions share one Payments interface. Amount is never free-entered — it is the obligation's principal, full outstanding balance, or the selected installment's amount (§6.4.1, §12.2.4). Requires the recipient to have a verified Telebirr account, or returns `409 RECIPIENT_UNVERIFIED`.
          */
         post: operations["initiateChapaPayment"];
         delete?: never;
@@ -451,7 +491,7 @@ export interface paths {
         put?: never;
         /**
          * Chapa checkout (collection) confirmation callback
-         * @description Server-to-server; not called by clients. Signature-verified before any state change is applied (§11.1.1, §10.2). On confirmation, funds are in BuryMe's merchant balance and the backend proceeds to the Transfer hop.
+         * @description Server-to-server; not called by clients. Signature-verified before any state change is applied (§11.1.1, §10.2). On confirmation, funds are in BuryMe's merchant balance and the backend proceeds to the Transfer hop — to the borrower for a `Disbursement` payment, to the lender for a `Repayment`. The Payment stays `Pending Acknowledgement` until the transfer webhook confirms; a failed checkout marks it `Failed`.
          */
         post: operations["chapaCheckoutWebhook"];
         delete?: never;
@@ -743,6 +783,23 @@ export interface components {
         VerifyTelebirrRequest: {
             /** @description §12.2.1 Ethiopian Telebirr format. */
             telebirr_number: string;
+        };
+        /** @description State of the verification code just sent by `POST /users/me/telebirr/otp`. The code itself is never returned. */
+        TelebirrOtpChallenge: {
+            /**
+             * Format: date-time
+             * @description When the code stops being accepted (5 minutes after sending).
+             */
+            expires_at: string;
+            /**
+             * Format: date-time
+             * @description Earliest time a new code may be requested (60 seconds after sending).
+             */
+            resend_available_at: string;
+        };
+        ConfirmTelebirrOtpRequest: {
+            /** @description The 6-digit code received by SMS. */
+            code: string;
         };
         TelebirrAccount: {
             account_id: string;
@@ -1328,7 +1385,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Updated Telebirr account state (Unverified while verification is in progress). */
+            /** @description Updated Telebirr account state (Unverified while verification is in progress). Call `POST /users/me/telebirr/otp` next to start OTP verification of the saved number. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1338,6 +1395,86 @@ export interface operations {
                 };
             };
             400: components["responses"]["ValidationError"];
+        };
+    };
+    sendTelebirrOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Code sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelebirrOtpChallenge"];
+                };
+            };
+            /** @description No Telebirr number is saved yet, or the account is already Verified (`STATUS_CONFLICT`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A code was sent less than 60 seconds ago (`DUPLICATE_SUBMISSION`). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    confirmTelebirrOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmTelebirrOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Telebirr account now `Verified`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelebirrAccount"];
+                };
+            };
+            /** @description Wrong or expired code (`VALIDATION_ERROR`, field `code`). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No verification is pending, attempts are exhausted, or the account is already Verified (`STATUS_CONFLICT`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listRequests: {
@@ -1587,17 +1724,35 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Transfer initiated; obligation remains `Pending Disbursement` until the transfer webhook confirms. */
-            202: {
+            /** @description Payment created with a live `checkout_url`; obligation remains `Pending Disbursement`. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Obligation"];
+                    "application/json": components["schemas"]["Payment"];
                 };
             };
-            /** @description Not in `Pending Disbursement`, or recipient (borrower) not yet Telebirr-verified. */
+            /** @description Caller is not the lender (`UNAUTHORIZED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not in `Pending Disbursement` (`STATUS_CONFLICT`), borrower not yet Telebirr-verified (`RECIPIENT_UNVERIFIED`), or a disbursement payment is already in progress (`DUPLICATE_SUBMISSION`). */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Chapa could not open the checkout session (`PAYMENT_GATEWAY_ERROR`); the payment is marked `Failed`. */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

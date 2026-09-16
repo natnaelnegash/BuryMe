@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { Schemas } from "@buryme/shared";
 
 import { ApiError } from "../api/client.js";
 import { ObligationCard, type ObligationDirection } from "../components/domain/ObligationCard.js";
@@ -9,6 +8,7 @@ import { FilterChip } from "../components/ui/FilterChip.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useObligationsQuery, useRequestRepayment } from "../hooks/useObligations.js";
 import { formatSignedMoney } from "../lib/money.js";
+import { isOverdue } from "../lib/obligations.js";
 import styles from "./ObligationsPage.module.css";
 
 function mutationErrorMessage(error: unknown): string | null {
@@ -33,12 +33,7 @@ export function ObligationsPage() {
   const { data, isLoading, error: queryError } = useObligationsQuery();
   const repaymentMutation = useRequestRepayment();
 
-  const today = new Date().toISOString().slice(0, 10);
   const all = data?.data ?? [];
-
-  function isOverdue(o: Schemas["Obligation"]): boolean {
-    return o.status === "Active" && o.due_date < today && o.outstanding_balance.amount > 0;
-  }
 
   const obligations = all.filter((o) => {
     if (tab === "active") return o.status === "Active" || o.status === "Partially Paid";
@@ -49,10 +44,7 @@ export function ObligationsPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader
-        title="Obligations"
-        subtitle="Everything you owe and are owed, in one place."
-      />
+      <PageHeader title="Obligations" subtitle="Everything you owe and are owed, in one place." />
 
       <div className={styles.filters}>
         {TABS.map((t) => (
@@ -98,6 +90,7 @@ export function ObligationsPage() {
                   )}
                   status={o.status}
                   direction={direction}
+                  to={`/obligations/${o.obligation_id}`}
                 />
                 {canChase && (
                   <div className={styles.rowActions}>
@@ -105,9 +98,7 @@ export function ObligationsPage() {
                       kind="secondary"
                       size="small"
                       disabled={busy}
-                      onClick={() =>
-                        repaymentMutation.mutate({ obligationId: o.obligation_id })
-                      }
+                      onClick={() => repaymentMutation.mutate({ obligationId: o.obligation_id })}
                     >
                       {busy ? "Sending…" : "Request repayment"}
                     </Button>

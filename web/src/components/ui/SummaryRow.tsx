@@ -24,7 +24,11 @@ export function SummaryRow({
     <div className={[styles.row, divider ? styles.divider : ""].filter(Boolean).join(" ")}>
       <span className={styles.label}>{label}</span>
       <span className={styles.right}>
-        <span className={[styles.value, tone !== "default" ? styles[tone] : ""].filter(Boolean).join(" ")}>
+        <span
+          className={[styles.value, tone !== "default" ? styles[tone] : ""]
+            .filter(Boolean)
+            .join(" ")}
+        >
           {value}
         </span>
         {action}

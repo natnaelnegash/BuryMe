@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { ProgressSegments } from "../ui/ProgressSegments.js";
 import styles from "./CenteredLayout.module.css";
 
 interface CenteredLayoutProps {
@@ -10,8 +11,13 @@ interface CenteredLayoutProps {
   width: number;
   /** Renders the "← Back" control; navigates back in history by default. */
   back?: boolean | (() => void);
-  /** Card contents. */
+  /** Multi-step flows (15:33): "Step X of Y" above the title and a
+   *  progress track under the subtitle. */
+  step?: { current: number; total: number };
+  /** Card contents — or, with `plain`, the column contents. */
   children: ReactNode;
+  /** Skip the card wrapper; the screen lays out its own cards (16:132). */
+  plain?: boolean;
   /** Anything that belongs in the column but outside the card. */
   after?: ReactNode;
 }
@@ -21,7 +27,9 @@ export function CenteredLayout({
   subtitle,
   width,
   back = false,
+  step,
   children,
+  plain = false,
   after,
 }: CenteredLayoutProps) {
   const navigate = useNavigate();
@@ -34,11 +42,17 @@ export function CenteredLayout({
           ← &nbsp;Back
         </button>
       )}
-      <header className={styles.head}>
+      <header className={[styles.head, step ? styles.stepHead : ""].filter(Boolean).join(" ")}>
+        {step && (
+          <span className={styles.step}>
+            Step {step.current} of {step.total}
+          </span>
+        )}
         <h1 className={styles.title}>{title}</h1>
         <p className={styles.subtitle}>{subtitle}</p>
+        {step && <ProgressSegments current={step.current} total={step.total} />}
       </header>
-      <section className={styles.card}>{children}</section>
+      {plain ? children : <section className={styles.card}>{children}</section>}
       {after}
     </div>
   );

@@ -1,0 +1,152 @@
+/* Figma: Obligation Detail (14:2 / 14:97 / 14:198 / 14:300). Body is
+ * vertical, gap 20; then "Cols" — 700px main + 476px side, gap 24. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.back {
+  align-self: flex-start;
+  font: var(--text-link);
+  color: var(--color-text-gray);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--color-text-dark);
+}
+
+.cols {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.mainCol {
+  display: flex;
+  flex: 700 1 0;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.sideCol {
+  display: flex;
+  flex: 476 1 0;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.headerCard,
+.detailsCard,
+.historyCard,
+.actionsCard {
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--elevation-card);
+}
+
+/* Header Card (14:35): 24/26 padding, gap 16, centred. */
+.headerCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 26px;
+}
+
+.hCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hName {
+  font: var(--text-amount-l);
+  color: var(--color-text-dark);
+}
+
+.hRelation {
+  font: var(--text-label);
+  color: var(--color-text-gray);
+}
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.amtCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.amtLabel {
+  font: var(--text-pill);
+  color: var(--color-text-gray);
+}
+
+.amt {
+  font: var(--text-display);
+}
+
+.amtTeal {
+  color: var(--color-teal);
+}
+
+.amtAmber {
+  color: var(--color-amber);
+}
+
+/* Details Card (14:50): 8/26 padding, rows supply their own 12px. */
+.detailsCard {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 26px;
+}
+
+/* History Card (14:66): 22/26 padding, gap 16. */
+.historyCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 26px;
+}
+
+.cardTitle {
+  font: var(--text-card-section);
+  color: var(--color-text-dark);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+
+/* Actions Card (14:90): 24 padding, gap 12. */
+.actionsCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.muted {
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

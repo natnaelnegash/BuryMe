@@ -49,3 +49,13 @@
   background: var(--color-white);
   box-shadow: var(--elevation-card);
 }
+
+/* Flow heads (15:33) space their lines 12 apart instead of 6. */
+.stepHead {
+  gap: 12px;
+}
+
+.step {
+  font: var(--text-step);
+  color: var(--color-teal);
+}

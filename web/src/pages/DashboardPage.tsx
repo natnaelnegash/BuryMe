@@ -107,7 +107,7 @@ export function DashboardPage() {
                 amountDirection={incoming ? "incoming" : "outgoing"}
                 status={requestStatusLabel(r, uid)}
                 actions={
-                  <Link to="/requests">
+                  <Link to={`/requests/${r.request_id}`}>
                     <Button size="small">Respond</Button>
                   </Link>
                 }
@@ -143,6 +143,7 @@ export function DashboardPage() {
                 )}
                 status={o.status}
                 direction={direction}
+                to={`/obligations/${o.obligation_id}`}
               />
             );
           })}

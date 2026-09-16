@@ -1,0 +1,64 @@
+/* Figma: Timeline Item (46:2059). */
+
+.item {
+  display: flex;
+  gap: 14px;
+  list-style: none;
+}
+
+.spine {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  width: 16px;
+  padding-top: 1px;
+}
+
+.dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.rail {
+  flex: 1;
+  width: 2px;
+  margin-top: 1px;
+  background: var(--color-border);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 18px;
+}
+
+.text.last {
+  padding-bottom: 0;
+}
+
+.title {
+  font: var(--text-name-s);
+  color: var(--color-text-dark);
+}
+
+.subtitle {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+.teal {
+  background: var(--color-teal);
+}
+.amber {
+  background: var(--color-amber);
+}
+.indigo {
+  background: var(--color-indigo);
+}
+.gray {
+  background: var(--color-settled);
+}

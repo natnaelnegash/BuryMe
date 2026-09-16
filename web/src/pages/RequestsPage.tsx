@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
 import { ApiError } from "../api/client.js";
@@ -7,45 +8,28 @@ import { PageHeader } from "../components/layout/PageHeader.js";
 import { Button } from "../components/ui/Button.js";
 import { FilterChip } from "../components/ui/FilterChip.js";
 import { useAuth } from "../hooks/useAuth.js";
-import {
-  useAcceptRequest,
-  useCancelRequest,
-  useCounterRequest,
-  useDeclineRequest,
-  useRequestsQuery,
-} from "../hooks/useRequests.js";
+import { useCancelRequest, useRequestsQuery } from "../hooks/useRequests.js";
 import { formatMoney, formatSignedMoney } from "../lib/money.js";
 import { canCancel, canRespond, requestStatusLabel } from "../lib/requests.js";
 import styles from "./RequestsPage.module.css";
 
-function mutationErrorMessage(error: unknown): string | null {
+function errorMessage(error: unknown): string | null {
   if (!error) return null;
   return error instanceof ApiError ? error.message : "Something went wrong.";
-}
-
-// The accept/counter mutations take `{ requestId, ... }`, decline/cancel take
-// a bare `requestId` — these read a mutation's in-flight variables per row.
-function matchesRowById(variables: string | undefined, requestId: string): boolean {
-  return variables === requestId;
-}
-function matchesRowByField(
-  variables: { requestId: string } | undefined,
-  requestId: string,
-): boolean {
-  return variables?.requestId === requestId;
 }
 
 // Figma's filter tabs: Received / Sent, which map onto the API's `role`.
 type Tab = "recipient" | "initiator";
 
+// Figma: List — Requests (27:142). Rows are the Request Row component; the
+// only inline action is Cancel — responding (accept / decline / counter)
+// happens on the dedicated Request Response screen at /requests/:id.
 export function RequestsPage() {
+  const navigate = useNavigate();
   const { buryMeUser } = useAuth();
   const uid = buryMeUser?.user_id;
   const [tab, setTab] = useState<Tab>("recipient");
   const { data, isLoading, error: queryError } = useRequestsQuery({ role: tab });
-  const acceptMutation = useAcceptRequest();
-  const declineMutation = useDeclineRequest();
-  const counterMutation = useCounterRequest();
   const cancelMutation = useCancelRequest();
 
   const requests = data?.data ?? [];
@@ -76,7 +60,7 @@ export function RequestsPage() {
       {isLoading && <p className={styles.empty}>Loading…</p>}
       {queryError && (
         <p role="alert" className={styles.error}>
-          {mutationErrorMessage(queryError)}
+          {errorMessage(queryError)}
         </p>
       )}
 
@@ -90,58 +74,14 @@ export function RequestsPage() {
         <div className={styles.list}>
           {requests.map((r) => {
             const id = r.request_id;
-            const respondable = canRespond(r, uid);
-            const cancellable = canCancel(r, uid);
             const incoming = r.receiving_user.user_id === uid && r.request_type !== "Repayment";
             const counterparty =
               r.initiating_user.user_id === uid ? r.receiving_user : r.initiating_user;
-
-            const isBusy =
-              (acceptMutation.isPending && matchesRowByField(acceptMutation.variables, id)) ||
-              (declineMutation.isPending && matchesRowById(declineMutation.variables, id)) ||
-              (counterMutation.isPending && matchesRowByField(counterMutation.variables, id)) ||
-              (cancelMutation.isPending && matchesRowById(cancelMutation.variables, id));
+            const cancelling = cancelMutation.isPending && cancelMutation.variables === id;
             const rowError =
-              (acceptMutation.isError &&
-                matchesRowByField(acceptMutation.variables, id) &&
-                mutationErrorMessage(acceptMutation.error)) ||
-              (declineMutation.isError &&
-                matchesRowById(declineMutation.variables, id) &&
-                mutationErrorMessage(declineMutation.error)) ||
-              (counterMutation.isError &&
-                matchesRowByField(counterMutation.variables, id) &&
-                mutationErrorMessage(counterMutation.error)) ||
-              (cancelMutation.isError &&
-                matchesRowById(cancelMutation.variables, id) &&
-                mutationErrorMessage(cancelMutation.error));
-
-            function handleAccept() {
-              if (r.request_type !== "Borrow") {
-                acceptMutation.mutate({ requestId: id });
-                return;
-              }
-              // Borrow acceptance needs a disbursement method. The design puts
-              // this on the dedicated Request Response screen (16:66); until
-              // that route exists, prompt for it inline.
-              const answer = window.prompt(
-                'How was this disbursed? Type "given" (already given) or "app" (through the app).',
-                "given",
-              );
-              if (!answer) return;
-              const method = answer.trim().toLowerCase().startsWith("a")
-                ? "Already Given"
-                : "Through App";
-              acceptMutation.mutate({ requestId: id, body: { disbursement_method: method } });
-            }
-
-            function handleCounter() {
-              const amount = window.prompt("Counter amount (ETB)?");
-              if (!amount) return;
-              counterMutation.mutate({
-                requestId: id,
-                body: { amount: { amount: Number(amount), currency: "ETB" } },
-              });
-            }
+              cancelMutation.isError && cancelMutation.variables === id
+                ? errorMessage(cancelMutation.error)
+                : null;
 
             return (
               <div key={id}>
@@ -153,39 +93,27 @@ export function RequestsPage() {
                   status={requestStatusLabel(r, uid)}
                   actions={
                     <>
-                      {respondable && (
-                        <>
-                          <Button size="small" disabled={isBusy} onClick={handleAccept}>
-                            Accept
-                          </Button>
-                          <Button
-                            kind="secondary"
-                            size="small"
-                            disabled={isBusy}
-                            onClick={() => declineMutation.mutate(id)}
-                          >
-                            Decline
-                          </Button>
-                          {r.status === "Pending" && (
-                            <Button
-                              kind="ghost"
-                              size="small"
-                              disabled={isBusy}
-                              onClick={handleCounter}
-                            >
-                              Counter
-                            </Button>
-                          )}
-                        </>
-                      )}
-                      {cancellable && (
+                      {canRespond(r, uid) ? (
+                        <Button size="small" onClick={() => navigate(`/requests/${id}`)}>
+                          Respond
+                        </Button>
+                      ) : (
                         <Button
                           kind="ghost"
                           size="small"
-                          disabled={isBusy}
+                          onClick={() => navigate(`/requests/${id}`)}
+                        >
+                          View
+                        </Button>
+                      )}
+                      {canCancel(r, uid) && (
+                        <Button
+                          kind="ghost"
+                          size="small"
+                          disabled={cancelling}
                           onClick={() => cancelMutation.mutate(id)}
                         >
-                          Cancel
+                          {cancelling ? "Cancelling…" : "Cancel"}
                         </Button>
                       )}
                     </>

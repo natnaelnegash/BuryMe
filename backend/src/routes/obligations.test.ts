@@ -6,9 +6,20 @@ vi.mock("../config/firebase.js", () => ({
 }));
 vi.mock("../db/client.js", () => ({
   prisma: {
-    obligation: { findFirst: vi.fn(), findMany: vi.fn() },
+    obligation: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     request: { create: vi.fn() },
+    telebirrAccount: { findUnique: vi.fn() },
+    payment: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   },
+}));
+const chapa = {
+  initiateCheckout: vi.fn(),
+  initiateTransfer: vi.fn(),
+  verifyWebhookSignature: vi.fn(),
+};
+vi.mock("../config/chapa.js", () => ({
+  getChapaClient: () => chapa,
+  chapaReturnUrl: (path: string) => `http://web${path}`,
 }));
 
 const { app } = await import("../app.js");
@@ -131,5 +142,124 @@ describe("POST /obligations/:id/repayment-requests", () => {
       .send({});
     expect(res.status).toBe(201);
     expect(res.body.request_type).toBe("Repayment");
+  });
+});
+
+describe("POST /obligations/:id/disburse", () => {
+  const pending = () =>
+    baseObligation({ status: "PendingDisbursement", disbursementMethod: "ThroughApp" });
+  const verifiedTelebirr = {
+    accountId: "acct-b",
+    userId: borrower.id,
+    telebirrNumber: "0911111111",
+    verificationStatus: "Verified",
+  };
+  const createdPayment = {
+    id: "pay-1",
+    obligationId: "obl-1",
+    installmentId: null,
+    payerId: lender.id,
+    recipientId: borrower.id,
+    amount: { toNumber: () => 1000 },
+    paymentDirection: "Disbursement",
+    paymentMethod: "Chapa",
+    recordedByUserId: null,
+    externalMethodNote: null,
+    chapaTransactionId: null,
+    checkoutUrl: null,
+    status: "PendingAcknowledgement",
+    recordedAt: new Date("2026-09-16T00:00:00.000Z"),
+    confirmedAt: null,
+    payer: lender,
+    recipient: borrower,
+  };
+
+  it("rejects the borrower", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(pending() as never);
+    const res = await request(app).post("/api/v1/obligations/obl-1/disburse").set(BORROWER_AUTH);
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("UNAUTHORIZED");
+  });
+
+  it("rejects an obligation that is not Pending Disbursement", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(baseObligation() as never);
+    const res = await request(app).post("/api/v1/obligations/obl-1/disburse").set(LENDER_AUTH);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("STATUS_CONFLICT");
+  });
+
+  it("rejects an unverified borrower before taking the lender's money", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(pending() as never);
+    vi.mocked(prisma.telebirrAccount.findUnique).mockResolvedValue({
+      ...verifiedTelebirr,
+      verificationStatus: "Unverified",
+    } as never);
+    const res = await request(app).post("/api/v1/obligations/obl-1/disburse").set(LENDER_AUTH);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("RECIPIENT_UNVERIFIED");
+    expect(chapa.initiateCheckout).not.toHaveBeenCalled();
+  });
+
+  it("rejects a second disbursement while one is in flight", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(pending() as never);
+    vi.mocked(prisma.telebirrAccount.findUnique).mockResolvedValue(verifiedTelebirr as never);
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue({ id: "pay-0" } as never);
+    const res = await request(app).post("/api/v1/obligations/obl-1/disburse").set(LENDER_AUTH);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("DUPLICATE_SUBMISSION");
+  });
+
+  it("marks the payment Failed and returns 502 when Chapa can't open checkout", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(pending() as never);
+    vi.mocked(prisma.telebirrAccount.findUnique).mockResolvedValue(verifiedTelebirr as never);
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.payment.create).mockResolvedValue(createdPayment as never);
+    chapa.initiateCheckout.mockRejectedValueOnce(new Error("down"));
+
+    const res = await request(app).post("/api/v1/obligations/obl-1/disburse").set(LENDER_AUTH);
+    expect(res.status).toBe(502);
+    expect(res.body.error.code).toBe("PAYMENT_GATEWAY_ERROR");
+    expect(prisma.payment.update).toHaveBeenCalledWith({
+      where: { id: "pay-1" },
+      data: { status: "Failed" },
+    });
+    expect(chapa.initiateTransfer).not.toHaveBeenCalled();
+  });
+
+  it("creates the payment and returns 201 with the lender's checkout URL", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(pending() as never);
+    vi.mocked(prisma.telebirrAccount.findUnique).mockResolvedValue(verifiedTelebirr as never);
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.payment.create).mockResolvedValue(createdPayment as never);
+    vi.mocked(prisma.payment.update).mockResolvedValue({
+      ...createdPayment,
+      checkoutUrl: "https://checkout.chapa.co/x",
+    } as never);
+    chapa.initiateCheckout.mockResolvedValueOnce({ checkoutUrl: "https://checkout.chapa.co/x" });
+
+    const res = await request(app).post("/api/v1/obligations/obl-1/disburse").set(LENDER_AUTH);
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      payment_id: "pay-1",
+      payment_direction: "Disbursement",
+      payment_method: "Chapa",
+      status: "Pending Acknowledgement",
+      checkout_url: "https://checkout.chapa.co/x",
+      payer: { user_id: lender.id },
+      recipient: { user_id: borrower.id },
+    });
+
+    // The lender pays in; nothing is transferred yet.
+    expect(chapa.initiateCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 1000,
+        currency: "ETB",
+        reference: "pay-1",
+        payerName: lender.displayName,
+        payerPhone: lender.identifier,
+      }),
+    );
+    expect(chapa.initiateTransfer).not.toHaveBeenCalled();
+    expect(prisma.obligation.update).not.toHaveBeenCalled();
   });
 });

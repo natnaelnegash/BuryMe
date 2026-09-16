@@ -1,131 +1,47 @@
-import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import type { Schemas } from "@buryme/shared";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
-import { useCreateRequest } from "../hooks/useRequests.js";
-import { useSearchUsersQuery } from "../hooks/useUsers.js";
+import { CenteredLayout } from "../components/layout/CenteredLayout.js";
+import { Note } from "../components/ui/Note.js";
+import { OptionCard } from "../components/ui/OptionCard.js";
+import styles from "./NewRequestPage.module.css";
 
+// Figma: Screen — New (chooser) (49:2727). Routes into the Lend / Borrow
+// flows; the `?to=` recipient from Search is carried through untouched.
+// Group expense is Slice 7 — its backend doesn't exist yet, so the row is
+// present but disabled rather than leading somewhere that 404s.
 export function NewRequestPage() {
   const navigate = useNavigate();
-  const [requestType, setRequestType] = useState<"Borrow" | "Lend">("Borrow");
-  const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
-  const [recipientId, setRecipientId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [purpose, setPurpose] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [disbursementMethod, setDisbursementMethod] = useState<"Already Given" | "Through App">(
-    "Already Given",
-  );
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const { data: candidates } = useSearchUsersQuery(submittedQuery);
-  const createRequestMutation = useCreateRequest();
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    if (!recipientId) {
-      setFormError("Pick a recipient from the search results first.");
-      return;
-    }
-    const body: Schemas["BorrowRequestInput"] | Schemas["LendRequestInput"] = {
-      request_type: requestType,
-      recipient_user_id: recipientId,
-      amount: { amount: Number(amount), currency: "ETB" },
-      purpose,
-      proposed_repayment_type: "Lump Sum",
-      proposed_due_date: dueDate,
-      ...(requestType === "Lend" ? { disbursement_method: disbursementMethod } : {}),
-    } as Schemas["BorrowRequestInput"] | Schemas["LendRequestInput"];
-    createRequestMutation.mutate(body, { onSuccess: () => navigate("/requests") });
-  }
-
-  const error =
-    formError ??
-    (createRequestMutation.isError
-      ? createRequestMutation.error instanceof ApiError
-        ? createRequestMutation.error.message
-        : "Something went wrong."
-      : null);
+  const [params] = useSearchParams();
+  const suffix = params.get("to") ? `?to=${encodeURIComponent(params.get("to") as string)}` : "";
 
   return (
-    <div>
-      <h1>New request</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          <input
-            type="radio"
-            checked={requestType === "Borrow"}
-            onChange={() => setRequestType("Borrow")}
-          />
-          Borrow (I need money)
-        </label>
-        <label>
-          <input
-            type="radio"
-            checked={requestType === "Lend"}
-            onChange={() => setRequestType("Lend")}
-          />
-          Lend (I'm offering money)
-        </label>
-
-        <div>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search recipient by name/phone/email"
-          />
-          <button type="button" onClick={() => setSubmittedQuery(query)}>
-            Search
-          </button>
-          <ul>
-            {(candidates ?? []).map((c) => (
-              <li key={c.user_id}>
-                <button type="button" onClick={() => setRecipientId(c.user_id)}>
-                  {recipientId === c.user_id ? "✓ " : ""}
-                  {c.display_name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <input
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Amount (ETB)"
-          type="number"
-          min="0.01"
-          step="0.01"
-          required
-        />
-        <input
-          value={purpose}
-          onChange={(e) => setPurpose(e.target.value)}
-          placeholder="Purpose"
-          minLength={3}
-          maxLength={200}
-          required
-        />
-        <input value={dueDate} onChange={(e) => setDueDate(e.target.value)} type="date" required />
-        {requestType === "Lend" && (
-          <select
-            value={disbursementMethod}
-            onChange={(e) =>
-              setDisbursementMethod(e.target.value as "Already Given" | "Through App")
-            }
-          >
-            <option value="Already Given">Already given directly</option>
-            <option value="Through App">Send through the app</option>
-          </select>
-        )}
-        <button type="submit" disabled={createRequestMutation.isPending}>
-          {createRequestMutation.isPending ? "Sending…" : "Send request"}
-        </button>
-      </form>
-      {error && <p role="alert">{error}</p>}
-    </div>
+    <CenteredLayout
+      title="What do you want to record?"
+      subtitle="Every obligation on BuryMe starts from one of these three."
+      width={680}
+      back
+    >
+      <p className={styles.heading}>Choose a starting point</p>
+      <OptionCard
+        trailing="chevron"
+        title="Lend money"
+        description="Record money you’ve given, or will send through the app"
+        onClick={() => navigate(`/requests/new/lend${suffix}`)}
+      />
+      <OptionCard
+        trailing="chevron"
+        title="Borrow money"
+        description="Ask someone for money with terms you propose"
+        onClick={() => navigate(`/requests/new/borrow${suffix}`)}
+      />
+      <OptionCard
+        trailing="chevron"
+        title="Group expense"
+        description="Split a bill you paid across up to 50 people"
+        disabled
+        reason="Group expenses are coming in a later release"
+      />
+      <Note color="gray">Repayment requests start from an obligation, not here.</Note>
+    </CenteredLayout>
   );
 }

@@ -7,6 +7,7 @@ import {
   counterRequest,
   createRequest,
   declineRequest,
+  getRequest,
   listRequests,
   type CreateRequestBody,
 } from "../api/requests.js";
@@ -21,6 +22,14 @@ export function useRequestsQuery(params?: { role?: "initiator" | "recipient" }) 
   return useQuery({
     queryKey: [...REQUESTS_KEY, params?.role ?? "all"],
     queryFn: () => listRequests(params),
+  });
+}
+
+export function useRequestQuery(requestId: string | undefined) {
+  return useQuery({
+    queryKey: [...REQUESTS_KEY, "detail", requestId],
+    queryFn: () => getRequest(requestId as string),
+    enabled: requestId !== undefined,
   });
 }
 

@@ -4,15 +4,20 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell.js";
 import { useAuth } from "./hooks/useAuth.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
+import { DisbursementPage } from "./pages/DisbursementPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { NewRequestPage } from "./pages/NewRequestPage.js";
+import { ObligationDetailPage } from "./pages/ObligationDetailPage.js";
 import { ObligationsPage } from "./pages/ObligationsPage.js";
 import { ProfileEditPage } from "./pages/ProfileEditPage.js";
 import { ProfilePage } from "./pages/ProfilePage.js";
 import { RegisterPage } from "./pages/RegisterPage.js";
+import { RequestDetailPage } from "./pages/RequestDetailPage.js";
+import { RequestFlowPage } from "./pages/RequestFlowPage.js";
 import { RequestsPage } from "./pages/RequestsPage.js";
 import { SearchPage } from "./pages/SearchPage.js";
 import { TelebirrPage } from "./pages/TelebirrPage.js";
+import { TelebirrVerifyPage } from "./pages/TelebirrVerifyPage.js";
 
 // Gates on auth status, then drops the screen into the app shell (top nav +
 // body container) that every authenticated screen shares in the design. The
@@ -63,6 +68,14 @@ export default function App() {
         }
       />
       <Route
+        path="/profile/telebirr/verify"
+        element={
+          <RequireAuth>
+            <TelebirrVerifyPage />
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/search"
         element={
           <RequireAuth>
@@ -87,10 +100,42 @@ export default function App() {
         }
       />
       <Route
+        path="/requests/new/:kind"
+        element={
+          <RequireAuth>
+            <RequestFlowPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/requests/:id"
+        element={
+          <RequireAuth>
+            <RequestDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/obligations"
         element={
           <RequireAuth>
             <ObligationsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/obligations/:id"
+        element={
+          <RequireAuth>
+            <ObligationDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/obligations/:id/disburse"
+        element={
+          <RequireAuth>
+            <DisbursementPage />
           </RequireAuth>
         }
       />

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Avatar } from "../ui/Avatar.js";
+import { Radio } from "../ui/Radio.js";
 import styles from "./PersonRow.module.css";
 
 interface PersonRowProps {
@@ -9,10 +10,12 @@ interface PersonRowProps {
   /** Figma: Selected=True — the chosen recipient in a picker. */
   selected?: boolean;
   action?: ReactNode;
-  onClick?: () => void;
+  /** Makes the row a radio-style choice: clickable, with the trailing
+   *  Radio from the Person Row component set (46:2008). */
+  onSelect?: () => void;
 }
 
-export function PersonRow({ name, detail, selected = false, action, onClick }: PersonRowProps) {
+export function PersonRow({ name, detail, selected = false, action, onSelect }: PersonRowProps) {
   const classes = [styles.row, selected ? styles.selected : ""].filter(Boolean).join(" ");
   const content = (
     <>
@@ -25,10 +28,17 @@ export function PersonRow({ name, detail, selected = false, action, onClick }: P
     </>
   );
 
-  if (onClick) {
+  if (onSelect) {
     return (
-      <button type="button" className={classes} onClick={onClick} aria-pressed={selected}>
+      <button
+        type="button"
+        className={classes}
+        onClick={onSelect}
+        role="radio"
+        aria-checked={selected}
+      >
         {content}
+        <Radio selected={selected} />
       </button>
     );
   }

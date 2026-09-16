@@ -6,6 +6,7 @@ import { authRouter } from "./routes/auth.js";
 import { usersRouter } from "./routes/users.js";
 import { requestsRouter } from "./routes/requests.js";
 import { obligationsRouter } from "./routes/obligations.js";
+import { webhooksRouter } from "./routes/webhooks.js";
 
 // Express app construction, separated from index.ts's `listen()` call so
 // tests (supertest) can exercise the exact same wiring without binding a
@@ -14,6 +15,9 @@ export const app = express();
 
 app.use(cors());
 
+// Webhooks need the raw body for signature checks, so they mount ahead of
+// the JSON parser (which would consume the stream first).
+app.use("/api/v1/webhooks/chapa", webhooksRouter);
 app.use(express.json());
 
 // Health check — kept deliberately dependency-free, stays outside
