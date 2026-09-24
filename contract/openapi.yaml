@@ -819,6 +819,10 @@ paths:
         No obligation is ever created for the payer's own share, even when
         `payer_share_included` is true (§8.12). Constraints: 1–50 participants,
         amounts must sum to the total within 0.01 ETB tolerance (§12.2.2).
+        Each spawned obligation is `Lump Sum` / `Already Given` and `Active`
+        from creation (the payer has already settled the bill), with
+        `outstanding_balance` equal to that participant's assigned share and
+        `due_date` taken from the input.
       operationId: createGroupExpense
       requestBody:
         required: true
@@ -1478,6 +1482,7 @@ components:
     # ── Schedules / Installments (§8.7, §8.8) ─────────────────────
     Installment:
       type: object
+      required: [installment_id, amount, due_date, status, paid_at]
       properties:
         installment_id: { type: string }
         amount: { $ref: "#/components/schemas/Money" }
@@ -1486,6 +1491,7 @@ components:
         paid_at: { type: string, format: date-time, nullable: true }
     RepaymentSchedule:
       type: object
+      required: [schedule_id, obligation_id, installment_count, status, installments, created_at]
       properties:
         schedule_id: { type: string }
         obligation_id: { type: string }
@@ -1523,6 +1529,24 @@ components:
       additionalProperties: false
     Payment:
       type: object
+      required:
+        [
+          payment_id,
+          obligation_id,
+          installment_id,
+          payer,
+          recipient,
+          amount,
+          payment_direction,
+          payment_method,
+          recorded_by_user_id,
+          external_method_note,
+          chapa_transaction_id,
+          checkout_url,
+          status,
+          recorded_at,
+          confirmed_at,
+        ]
       properties:
         payment_id: { type: string }
         obligation_id: { type: string }
@@ -1553,7 +1577,15 @@ components:
     CreateGroupExpenseInput:
       type: object
       description: §12.2.2 — 1–50 participants; assigned amounts (+ payer's own share, if included) must sum to total within 0.01 ETB.
-      required: [total_amount, description, expense_date, payer_share_included, participants]
+      required:
+        [
+          total_amount,
+          description,
+          expense_date,
+          due_date,
+          payer_share_included,
+          participants,
+        ]
       properties:
         total_amount: { $ref: "#/components/schemas/Money" }
         description: { type: string, minLength: 3, maxLength: 200 }
@@ -1561,6 +1593,13 @@ components:
           type: string
           format: date
           description: Must not be in the future.
+        due_date:
+          type: string
+          format: date
+          description: >
+            Repayment due date applied to every spawned obligation — on or after
+            `expense_date`, at most 3 years out. The expense itself has no
+            lifecycle; this is the deadline each participant owes by.
         payer_share_included: { type: boolean }
         payer_share_amount:
           allOf: [{ $ref: "#/components/schemas/Money" }]
@@ -1579,6 +1618,7 @@ components:
       additionalProperties: false
     GroupExpenseParticipant:
       type: object
+      required: [participant_entry_id, participant, assigned_amount, obligation_id]
       properties:
         participant_entry_id: { type: string }
         participant: { $ref: "#/components/schemas/UserSummary" }
@@ -1586,12 +1626,29 @@ components:
         obligation_id: { type: string }
     GroupExpense:
       type: object
+      required:
+        [
+          expense_id,
+          payer,
+          total_amount,
+          description,
+          expense_date,
+          due_date,
+          payer_share_included,
+          payer_share_amount,
+          participants,
+          created_at,
+        ]
       properties:
         expense_id: { type: string }
         payer: { $ref: "#/components/schemas/UserSummary" }
         total_amount: { $ref: "#/components/schemas/Money" }
         description: { type: string }
         expense_date: { type: string, format: date }
+        due_date:
+          type: string
+          format: date
+          description: Due date carried onto every spawned obligation.
         payer_share_included: { type: boolean }
         payer_share_amount:
           allOf: [{ $ref: "#/components/schemas/Money" }]

@@ -7,8 +7,6 @@ import styles from "./NewRequestPage.module.css";
 
 // Figma: Screen — New (chooser) (49:2727). Routes into the Lend / Borrow
 // flows; the `?to=` recipient from Search is carried through untouched.
-// Group expense is Slice 7 — its backend doesn't exist yet, so the row is
-// present but disabled rather than leading somewhere that 404s.
 export function NewRequestPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -38,8 +36,7 @@ export function NewRequestPage() {
         trailing="chevron"
         title="Group expense"
         description="Split a bill you paid across up to 50 people"
-        disabled
-        reason="Group expenses are coming in a later release"
+        onClick={() => navigate("/expenses/new")}
       />
       <Note color="gray">Repayment requests start from an obligation, not here.</Note>
     </CenteredLayout>

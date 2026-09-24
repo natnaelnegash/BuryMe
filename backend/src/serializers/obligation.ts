@@ -5,7 +5,14 @@ import { DISBURSEMENT_METHOD, OBLIGATION_STATUS, REPAYMENT_TYPE } from "./enums.
 import { toMoney } from "./money.js";
 import { toUserSummaryResponse } from "./user.js";
 
-type ObligationWithUsers = ObligationModel & { borrower: User; lender: User };
+// `originatingExpense` is the GroupExpenseParticipant row this obligation
+// was spawned from; the contract's `originating_expense_id` names the
+// expense itself, so the serializer reads through to `expenseId`.
+type ObligationWithUsers = ObligationModel & {
+  borrower: User;
+  lender: User;
+  originatingExpense?: { expenseId: string } | null;
+};
 
 export function toObligationResponse(obligation: ObligationWithUsers): Schemas["Obligation"] {
   return {
@@ -13,8 +20,7 @@ export function toObligationResponse(obligation: ObligationWithUsers): Schemas["
     borrower: toUserSummaryResponse(obligation.borrower),
     lender: toUserSummaryResponse(obligation.lender),
     originating_request_id: obligation.originatingRequestId,
-    // No group-expense support yet (Slice 7) — always null until then.
-    originating_expense_id: null,
+    originating_expense_id: obligation.originatingExpense?.expenseId ?? null,
     principal_amount: toMoney(obligation.principalAmount),
     outstanding_balance: toMoney(obligation.outstandingBalance),
     purpose: obligation.purpose,

@@ -141,6 +141,16 @@
   padding: 24px;
 }
 
+/* An inline link sitting in a Summary Row's value slot. */
+.inline {
+  color: var(--color-teal);
+  text-decoration: none;
+}
+
+.inline:hover {
+  text-decoration: underline;
+}
+
 .muted {
   font: var(--text-body);
   color: var(--color-text-gray);
@@ -149,4 +159,73 @@
 .error {
   font: var(--text-micro);
   color: var(--color-red);
+}
+
+/* Payments card rows — same rhythm as the Summary Row (12px vertical). */
+.paymentList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paymentRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.paymentRow:last-child {
+  border-bottom: none;
+}
+
+.paymentCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.paymentTitle {
+  font: var(--text-name-s);
+  color: var(--color-text-dark);
+}
+
+.paymentSub {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+.paymentRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.paymentAmount {
+  font: var(--text-amount-s);
+}
+
+.paymentActions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.scheduleHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scheduleProgress {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
 }

@@ -98,11 +98,11 @@ export const lendRequestInputSchema = z
   .strict();
 
 // Repayment is scoped to Lump Sum obligations only for now (Slice 3) —
-// `installment_id` must be omitted; full Installments support needs
-// Slice 6's Installment model to validate against.
+// `installment_id` is required iff the obligation is Installments — the
+// route checks that against the schedule.
 export const repaymentRequestBodySchema = z
   .object({
-    installment_id: z.null().optional(),
+    installment_id: z.string().min(1).nullable().optional(),
     note: z.string().max(300).nullable().optional(),
   })
   .strict();
@@ -243,5 +243,49 @@ export function parseBody<T>(schema: ZodType<T>, body: unknown): T {
 export const confirmTelebirrOtpRequestSchema = z
   .object({
     code: z.string().regex(/^\d{6}$/),
+  })
+  .strict();
+
+// POST /obligations/{id}/payments/chapa body — contract
+// InitiateChapaPaymentInput. `installment_id` required iff Installments.
+export const initiateChapaPaymentInputSchema = z
+  .object({
+    installment_id: z.string().min(1).nullable().optional(),
+  })
+  .strict();
+
+// POST /obligations/{id}/payments/external body — contract
+// RecordExternalPaymentInput (§12.2.4). Date bounds are checked in the route
+// against the obligation; the enum is the contract's ExternalPaymentMethodNote.
+export const recordExternalPaymentInputSchema = z
+  .object({
+    payment_direction: z.enum(["Disbursement", "Repayment"]),
+    installment_id: z.string().min(1).nullable().optional(),
+    payment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    external_method_note: z.enum(["Cash", "Bank Transfer", "Mobile Money", "Other"]),
+    note: z.string().max(300).nullable().optional(),
+  })
+  .strict();
+
+// POST /group-expenses body — contract CreateGroupExpenseInput (§12.2.2).
+// Cross-field rules (sum tolerance, payer not a participant, date bounds)
+// live in assertValidGroupExpense below, next to the shape they check.
+export const createGroupExpenseInputSchema = z
+  .object({
+    total_amount: moneySchema,
+    description: z.string().min(3).max(200),
+    expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    payer_share_included: z.boolean(),
+    payer_share_amount: moneySchema.nullable().optional(),
+    participants: z
+      .array(
+        z.object({
+          participant_user_id: z.string().min(1),
+          assigned_amount: moneySchema,
+        }),
+      )
+      .min(1)
+      .max(50),
   })
   .strict();

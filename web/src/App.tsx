@@ -5,12 +5,16 @@ import { AppShell } from "./components/layout/AppShell.js";
 import { useAuth } from "./hooks/useAuth.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { DisbursementPage } from "./pages/DisbursementPage.js";
+import { GroupExpenseDetailPage } from "./pages/GroupExpenseDetailPage.js";
+import { GroupExpenseFlowPage } from "./pages/GroupExpenseFlowPage.js";
+import { MakePaymentPage } from "./pages/MakePaymentPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { NewRequestPage } from "./pages/NewRequestPage.js";
 import { ObligationDetailPage } from "./pages/ObligationDetailPage.js";
 import { ObligationsPage } from "./pages/ObligationsPage.js";
 import { ProfileEditPage } from "./pages/ProfileEditPage.js";
 import { ProfilePage } from "./pages/ProfilePage.js";
+import { RecordPaymentPage } from "./pages/RecordPaymentPage.js";
 import { RegisterPage } from "./pages/RegisterPage.js";
 import { RequestDetailPage } from "./pages/RequestDetailPage.js";
 import { RequestFlowPage } from "./pages/RequestFlowPage.js";
@@ -136,6 +140,38 @@ export default function App() {
         element={
           <RequireAuth>
             <DisbursementPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/obligations/:id/pay"
+        element={
+          <RequireAuth>
+            <MakePaymentPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/obligations/:id/record"
+        element={
+          <RequireAuth>
+            <RecordPaymentPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/expenses/new"
+        element={
+          <RequireAuth>
+            <GroupExpenseFlowPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/expenses/:id"
+        element={
+          <RequireAuth>
+            <GroupExpenseDetailPage />
           </RequireAuth>
         }
       />

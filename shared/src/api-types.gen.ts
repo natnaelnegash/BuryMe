@@ -532,7 +532,7 @@ export interface paths {
         put?: never;
         /**
          * Record a group expense and spawn per-participant obligations
-         * @description Creates one bilateral Obligation per participant for their assigned share. No obligation is ever created for the payer's own share, even when `payer_share_included` is true (§8.12). Constraints: 1–50 participants, amounts must sum to the total within 0.01 ETB tolerance (§12.2.2).
+         * @description Creates one bilateral Obligation per participant for their assigned share. No obligation is ever created for the payer's own share, even when `payer_share_included` is true (§8.12). Constraints: 1–50 participants, amounts must sum to the total within 0.01 ETB tolerance (§12.2.2). Each spawned obligation is `Lump Sum` / `Already Given` and `Active` from creation (the payer has already settled the bill), with `outstanding_balance` equal to that participant's assigned share and `due_date` taken from the input.
          */
         post: operations["createGroupExpense"];
         delete?: never;
@@ -950,22 +950,22 @@ export interface components {
             next_cursor: string | null;
         };
         Installment: {
-            installment_id?: string;
-            amount?: components["schemas"]["Money"];
+            installment_id: string;
+            amount: components["schemas"]["Money"];
             /** Format: date */
-            due_date?: string;
-            status?: components["schemas"]["InstallmentStatus"];
+            due_date: string;
+            status: components["schemas"]["InstallmentStatus"];
             /** Format: date-time */
-            paid_at?: string | null;
+            paid_at: string | null;
         };
         RepaymentSchedule: {
-            schedule_id?: string;
-            obligation_id?: string;
-            installment_count?: number;
-            status?: components["schemas"]["ScheduleStatus"];
-            installments?: components["schemas"]["Installment"][];
+            schedule_id: string;
+            obligation_id: string;
+            installment_count: number;
+            status: components["schemas"]["ScheduleStatus"];
+            installments: components["schemas"]["Installment"][];
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
         };
         InitiateChapaPaymentInput: {
             /** @description Required for a repayment on an Installments obligation; must reference a Pending/Overdue installment (§12.2.4). Omit for Lump Sum or for disbursement. */
@@ -984,26 +984,26 @@ export interface components {
             note?: string | null;
         };
         Payment: {
-            payment_id?: string;
-            obligation_id?: string;
-            installment_id?: string | null;
-            payer?: components["schemas"]["UserSummary"];
-            recipient?: components["schemas"]["UserSummary"];
+            payment_id: string;
+            obligation_id: string;
+            installment_id: string | null;
+            payer: components["schemas"]["UserSummary"];
+            recipient: components["schemas"]["UserSummary"];
             /** @description System-determined, never freely entered (§12.2.4). */
-            amount?: components["schemas"]["Money"];
-            payment_direction?: components["schemas"]["PaymentDirection"];
-            payment_method?: components["schemas"]["PaymentMethod"];
+            amount: components["schemas"]["Money"];
+            payment_direction: components["schemas"]["PaymentDirection"];
+            payment_method: components["schemas"]["PaymentMethod"];
             /** @description External payments only. */
-            recorded_by_user_id?: string | null;
-            external_method_note?: components["schemas"]["ExternalPaymentMethodNote"] | null;
-            chapa_transaction_id?: string | null;
+            recorded_by_user_id: string | null;
+            external_method_note: components["schemas"]["ExternalPaymentMethodNote"] | null;
+            chapa_transaction_id: string | null;
             /** @description Present when a Chapa collection hop is pending. */
-            checkout_url?: string | null;
-            status?: components["schemas"]["PaymentStatus"];
+            checkout_url: string | null;
+            status: components["schemas"]["PaymentStatus"];
             /** Format: date-time */
-            recorded_at?: string;
+            recorded_at: string;
             /** Format: date-time */
-            confirmed_at?: string | null;
+            confirmed_at: string | null;
         };
         /** @description §12.2.2 — 1–50 participants; assigned amounts (+ payer's own share, if included) must sum to total within 0.01 ETB. */
         CreateGroupExpenseInput: {
@@ -1014,6 +1014,11 @@ export interface components {
              * @description Must not be in the future.
              */
             expense_date: string;
+            /**
+             * Format: date
+             * @description Repayment due date applied to every spawned obligation — on or after `expense_date`, at most 3 years out. The expense itself has no lifecycle; this is the deadline each participant owes by.
+             */
+            due_date: string;
             payer_share_included: boolean;
             /** @description Required when payer_share_included is true; omitted when false. */
             payer_share_amount?: components["schemas"]["Money"] | null;
@@ -1023,24 +1028,29 @@ export interface components {
             }[];
         };
         GroupExpenseParticipant: {
-            participant_entry_id?: string;
-            participant?: components["schemas"]["UserSummary"];
-            assigned_amount?: components["schemas"]["Money"];
-            obligation_id?: string;
+            participant_entry_id: string;
+            participant: components["schemas"]["UserSummary"];
+            assigned_amount: components["schemas"]["Money"];
+            obligation_id: string;
         };
         GroupExpense: {
-            expense_id?: string;
-            payer?: components["schemas"]["UserSummary"];
-            total_amount?: components["schemas"]["Money"];
-            description?: string;
+            expense_id: string;
+            payer: components["schemas"]["UserSummary"];
+            total_amount: components["schemas"]["Money"];
+            description: string;
             /** Format: date */
-            expense_date?: string;
-            payer_share_included?: boolean;
+            expense_date: string;
+            /**
+             * Format: date
+             * @description Due date carried onto every spawned obligation.
+             */
+            due_date: string;
+            payer_share_included: boolean;
             /** @description Recorded for accounting completeness only — no obligation is ever created against it. */
-            payer_share_amount?: components["schemas"]["Money"] | null;
-            participants?: components["schemas"]["GroupExpenseParticipant"][];
+            payer_share_amount: components["schemas"]["Money"] | null;
+            participants: components["schemas"]["GroupExpenseParticipant"][];
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
         };
         SettlementSuggestion: {
             suggestion_id?: string;

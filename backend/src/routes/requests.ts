@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { prisma } from "../db/client.js";
+import { scheduleCreateInput } from "../lib/schedule.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
 import {
@@ -115,8 +116,8 @@ requestsRouter.post("/", async (req, res, next) => {
           "obligation_id",
         );
       }
-      assertObligationRepayable(obligation, uid);
-      const request = await createRepaymentRequest(obligation, uid, body.note);
+      const target = await assertObligationRepayable(obligation, uid, body.installment_id);
+      const request = await createRepaymentRequest(obligation, uid, target, body.note);
       res.status(201).json(toRequestResponse(request));
       return;
     }
@@ -294,6 +295,11 @@ requestsRouter.post("/:requestId/accept", async (req, res, next) => {
           disbursementMethod,
           dueDate: new Date(terms.dueDate),
           status: isActive ? "Active" : "PendingDisbursement",
+          // Installments: materialise the agreed schedule in the same
+          // transaction — fixed from here on (§6.3.2).
+          ...(terms.repaymentType === "Installments" && terms.schedule
+            ? { schedule: scheduleCreateInput(terms.schedule) }
+            : {}),
         },
       }),
     ]);

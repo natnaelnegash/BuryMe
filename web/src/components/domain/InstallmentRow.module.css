@@ -1,0 +1,46 @@
+/* Repayment schedule rows — Summary Row rhythm (12px vertical, 1px divider). */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+  list-style: none;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row.highlighted .title {
+  color: var(--color-teal);
+}
+
+.col {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font: var(--text-name-s);
+  color: var(--color-text-dark);
+}
+
+.sub {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+.amount {
+  font: var(--text-amount-s);
+  color: var(--color-text-dark);
+}
+
+.amountPaid {
+  color: var(--color-text-gray);
+  text-decoration: line-through;
+}

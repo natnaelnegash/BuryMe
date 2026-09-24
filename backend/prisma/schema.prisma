@@ -8,9 +8,10 @@
 // comment naming the contract/openapi.yaml component schema it maps to, so
 // drift between the two is visible at a glance.
 //
-// Currently scoped through Slice 4 (disbursement): User,
-// TelebirrAccount, FcmToken (Slice 1); Request, Obligation (Slice 3);
-// Payment (Slice 4).
+// Currently scoped through Slice 7 (group expenses): User, TelebirrAccount,
+// FcmToken (Slice 1); Request, Obligation (Slice 3); Payment (Slice 4);
+// RepaymentSchedule, Installment (Slice 6); GroupExpense,
+// GroupExpenseParticipant (Slice 7).
 
 generator client {
   provider = "prisma-client"
@@ -48,6 +49,8 @@ model User {
   lenderOn          Obligation[] @relation("LenderObligations")
   paymentsMade      Payment[]    @relation("PaymentsMade")
   paymentsReceived  Payment[]    @relation("PaymentsReceived")
+  expensesPaid      GroupExpense[]            @relation("ExpensesPaid")
+  expenseShares     GroupExpenseParticipant[] @relation("ExpenseShares")
 
   @@map("users")
 }
@@ -138,9 +141,8 @@ model Request {
   @@map("requests")
 }
 
-// Maps to contract `Obligation` (§8.6). `originating_expense_id` has no
-// column yet — the serializer hardcodes it to null until Slice 7 (Group
-// Expenses) actually creates obligations that way.
+// Maps to contract `Obligation` (§8.6). Created either by accepting a
+// Borrow/Lend Request or by a group expense (`originatingExpenseId`).
 model Obligation {
   id                 String             @id @default(uuid())
   principalAmount    Decimal            @map("principal_amount") @db.Decimal(12, 2)
@@ -168,6 +170,11 @@ model Obligation {
   repaymentRequests Request[] @relation("RequestObligation")
 
   payments Payment[]
+  schedule RepaymentSchedule?
+
+  // Set when this obligation was spawned by a group expense (Slice 7).
+  originatingExpenseId String?                  @unique @map("originating_expense_id")
+  originatingExpense   GroupExpenseParticipant? @relation(fields: [originatingExpenseId], references: [id])
 
   @@map("obligations")
 }
@@ -212,7 +219,8 @@ enum ObligationStatus {
 // Maps to contract `Payment` (§8.9). One row per money movement on an
 // Obligation, in either direction and by either method. Slice 4 creates
 // Disbursement/Chapa rows; Slice 5 adds Repayment and External ones.
-// `installmentId` stays a plain string until Slice 6 has real rows.
+// `installmentId` points at the Installment a repayment settles (Installments
+// obligations only).
 model Payment {
   id                 String           @id @default(uuid())
   amount             Decimal          @db.Decimal(12, 2)
@@ -220,6 +228,7 @@ model Payment {
   paymentMethod      PaymentMethod    @map("payment_method")
   status             PaymentStatus    @default(PendingAcknowledgement)
   installmentId      String?          @map("installment_id")
+  installment        Installment?     @relation(fields: [installmentId], references: [id])
   recordedByUserId   String?          @map("recorded_by_user_id")
   externalMethodNote String?          @map("external_method_note")
   chapaTransactionId String?          @unique @map("chapa_transaction_id")
@@ -258,4 +267,97 @@ enum PaymentStatus {
   Confirmed
   Disputed
   Failed
+}
+
+// Maps to contract `RepaymentSchedule` (§8.7). Fixed at agreement and
+// read-only thereafter (§6.3.2): created inside the accept transaction
+// from the agreed `proposed_schedule`, one per Installments obligation.
+model RepaymentSchedule {
+  id               String         @id @default(uuid())
+  installmentCount Int            @map("installment_count")
+  status           ScheduleStatus @default(Active)
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  obligationId String     @unique @map("obligation_id")
+  obligation   Obligation @relation(fields: [obligationId], references: [id])
+
+  installments Installment[]
+
+  @@map("repayment_schedules")
+}
+
+// Maps to contract `Installment` (§8.8). `Pending → Overdue` is applied
+// lazily when a schedule is read or paid against (lib/schedule.ts) —
+// there is no scheduler in the stack yet (reminders are Slice 9).
+model Installment {
+  id      String            @id @default(uuid())
+  amount  Decimal           @db.Decimal(12, 2)
+  dueDate DateTime          @map("due_date") @db.Date
+  status  InstallmentStatus @default(Pending)
+  paidAt  DateTime?         @map("paid_at")
+
+  scheduleId String            @map("schedule_id")
+  schedule   RepaymentSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  payments Payment[]
+
+  @@index([scheduleId])
+  @@map("installments")
+}
+
+// Maps to contract `ScheduleStatus` enum exactly.
+enum ScheduleStatus {
+  Active
+  Completed
+}
+
+// Maps to contract `InstallmentStatus` enum exactly.
+enum InstallmentStatus {
+  Pending
+  Paid
+  Overdue
+}
+
+// Maps to contract `GroupExpense` (§8.12). One payer records a shared bill
+// and assigns each participant a share; accepting is not a thing here —
+// the obligations are created immediately, since the payer has already
+// settled the bill outside the platform.
+model GroupExpense {
+  id                 String   @id @default(uuid())
+  totalAmount        Decimal  @map("total_amount") @db.Decimal(12, 2)
+  description        String
+  expenseDate        DateTime @map("expense_date") @db.Date
+  // Carried onto every spawned obligation as its due date.
+  dueDate            DateTime @map("due_date") @db.Date
+  payerShareIncluded Boolean  @map("payer_share_included")
+  // Recorded for accounting completeness only — never spawns an obligation.
+  payerShareAmount   Decimal? @map("payer_share_amount") @db.Decimal(12, 2)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  payerId String @map("payer_id")
+  payer   User   @relation("ExpensesPaid", fields: [payerId], references: [id])
+
+  participants GroupExpenseParticipant[]
+
+  @@map("group_expenses")
+}
+
+// Maps to contract `GroupExpenseParticipant` (§8.13) — one row per
+// participant, paired 1:1 with the Obligation it spawned.
+model GroupExpenseParticipant {
+  id             String  @id @default(uuid())
+  assignedAmount Decimal @map("assigned_amount") @db.Decimal(12, 2)
+
+  expenseId String       @map("expense_id")
+  expense   GroupExpense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  participantId String @map("participant_id")
+  participant   User   @relation("ExpenseShares", fields: [participantId], references: [id])
+
+  // The bilateral obligation this share created (payer = lender).
+  obligation Obligation?
+
+  @@unique([expenseId, participantId])
+  @@index([expenseId])
+  @@map("group_expense_participants")
 }

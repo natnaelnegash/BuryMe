@@ -10,9 +10,9 @@ import {
 
 const OBLIGATIONS_KEY = ["obligations"] as const;
 
-export function useObligationsQuery(params?: { role?: "borrower" | "lender" }) {
+export function useObligationsQuery(params?: { role?: "borrower" | "lender"; limit?: number }) {
   return useQuery({
-    queryKey: [...OBLIGATIONS_KEY, params?.role ?? "all"],
+    queryKey: [...OBLIGATIONS_KEY, params?.role ?? "all", params?.limit ?? "default"],
     queryFn: () => listObligations(params),
   });
 }
@@ -35,7 +35,11 @@ export function useRequestRepayment() {
       obligationId: string;
       body?: Schemas["RepaymentRequestBody"];
     }) => requestRepayment(obligationId, body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: OBLIGATIONS_KEY }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: OBLIGATIONS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["schedule"] }),
+      ]),
   });
 }
 
@@ -43,6 +47,10 @@ export function useDisburseObligation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (obligationId: string) => disburseObligation(obligationId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: OBLIGATIONS_KEY }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: OBLIGATIONS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["schedule"] }),
+      ]),
   });
 }

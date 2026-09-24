@@ -2,10 +2,13 @@ import type { Schemas } from "@buryme/shared";
 
 import { apiClient } from "./client.js";
 
-export const listObligations = (params?: { role?: "borrower" | "lender" }) =>
-  apiClient.get<Schemas["ObligationPage"]>(
-    `/obligations${params?.role ? `?role=${params.role}` : ""}`,
-  );
+export const listObligations = (params?: { role?: "borrower" | "lender"; limit?: number }) => {
+  const query = new URLSearchParams();
+  if (params?.role) query.set("role", params.role);
+  if (params?.limit) query.set("limit", String(params.limit));
+  const suffix = query.size > 0 ? `?${query}` : "";
+  return apiClient.get<Schemas["ObligationPage"]>(`/obligations${suffix}`);
+};
 
 export const getObligation = (obligationId: string) =>
   apiClient.get<Schemas["Obligation"]>(`/obligations/${encodeURIComponent(obligationId)}`);

@@ -1,0 +1,23 @@
+/* Figma: Checkbox (76:1164). */
+
+.box {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-white);
+}
+
+.box.on {
+  border-color: var(--color-teal);
+  background: var(--color-teal);
+}
+
+.tick {
+  font: 700 12px/1 var(--font-family);
+  color: var(--color-white);
+}

@@ -26,8 +26,11 @@ export interface CheckoutInput {
   /** Payer details Chapa shows on the hosted checkout page. */
   payerName: string;
   payerPhone: string;
-  /** Where Chapa sends the payer after checkout (not the webhook). */
+  /** Where Chapa sends the payer after checkout (browser redirect). */
   returnUrl: string;
+  /** Server-to-server callback for this transaction — the webhook ingress.
+   *  Omitted when the API has no public origin configured. */
+  callbackUrl?: string;
 }
 
 export interface ChapaClient {
@@ -73,6 +76,7 @@ export class HttpChapaClient implements ChapaClient {
           phone_number: input.payerPhone,
           first_name: input.payerName,
           return_url: input.returnUrl,
+          ...(input.callbackUrl ? { callback_url: input.callbackUrl } : {}),
           "customization[title]": "BuryMe",
         }),
       });
@@ -95,6 +99,7 @@ export class HttpChapaClient implements ChapaClient {
   async initiateTransfer(input: TransferInput): Promise<{ transferId: string }> {
     let response: Response;
     try {
+      
       response = await this.fetchImpl("https://api.chapa.co/v1/transfers", {
         method: "POST",
         headers: {
@@ -103,14 +108,15 @@ export class HttpChapaClient implements ChapaClient {
         },
         body: JSON.stringify({
           account_name: input.beneficiaryName,
-          account_number: input.accountNumber,
+          account_number: "0" + input.accountNumber.slice(4),
           amount: input.amount.toFixed(2),
           currency: input.currency,
           reference: input.reference,
           bank_code: TELEBIRR_BANK_CODE,
         }),
-      });
-    } catch {
+        
+      })
+    } catch(err) {
       throw new ChapaGatewayError("Chapa unreachable");
     }
     // Response bodies are never logged — they can carry account details.

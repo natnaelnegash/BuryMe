@@ -1,0 +1,38 @@
+/* Figma: Screen — Group Expense · Consolidated (49:2889). Body stack is
+ * 24px; the card grid wraps two 592px cards per 1200px row at 16px both
+ * ways, which is a 2-column grid at this container width. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.back {
+  align-self: flex-start;
+  font: var(--text-link);
+  color: var(--color-text-gray);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--color-text-dark);
+}
+
+/* "Obligation Grid" (49:2930). */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.muted {
+  padding: 24px 0;
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

@@ -1,0 +1,109 @@
+/* Figma: Flow — Group Expense · Step 1 (27:360) and Step 2 (27:440). */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* "Include Me Toggle" (43:1935): field-bg card, 14px padding, radius 12. */
+.includeMe {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-row);
+  background: var(--color-field-bg);
+}
+
+.includeCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.includeTitle {
+  font: var(--text-name-s);
+  color: var(--color-text-dark);
+}
+
+.includeSub {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+.caption {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+/* "Two Up" (77:1182). */
+.twoUp {
+  display: flex;
+  gap: 16px;
+}
+
+.twoUp > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.groupLabel {
+  font: 400 13px/normal var(--font-family);
+  color: var(--color-text-gray);
+}
+
+/* "Sum" (27:507): one row per person, 12px vertical, 1px divider, with a
+ * 90×40 amount input on the right. */
+.shares {
+  display: flex;
+  flex-direction: column;
+}
+
+.shareRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.shareName {
+  font: var(--text-label);
+  color: var(--color-text-gray);
+}
+
+.shareInput {
+  width: 90px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  background: var(--color-white);
+  font: var(--text-field-value);
+  color: var(--color-text-dark);
+}
+
+.shareInput:focus {
+  outline: none;
+  border-color: var(--color-teal);
+}
+
+/* "Btn Row" — 6px top padding, two FILL buttons 12 apart. */
+.btnRow {
+  display: flex;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.btnRow > * {
+  flex: 1;
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

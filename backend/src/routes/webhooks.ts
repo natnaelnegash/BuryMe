@@ -1,8 +1,9 @@
-import { Router, raw, type Request } from "express";
+import { Router, raw, type Request, type RequestHandler, type Response } from "express";
 
 import { getChapaClient } from "../config/chapa.js";
 import { prisma } from "../db/client.js";
 import { startTransferForPayment } from "../lib/chapaPayments.js";
+import { confirmedPaymentEffects } from "../lib/payments.js";
 import { ApiError } from "../middleware/errors.js";
 
 // Chapa server-to-server callbacks (§11.1.1). Two deliberately separate
@@ -10,6 +11,10 @@ import { ApiError } from "../middleware/errors.js";
 // Chapa events; never collapse them (CLAUDE.md). For a disbursement the
 // sequence is: lender pays the checkout → /checkout confirms and starts the
 // transfer → /transfer confirms and activates the obligation.
+//
+// Chapa's dashboard registers ONE webhook URL, so `POST /webhooks/chapa`
+// is the real ingress; it dispatches to the two contract endpoints'
+// handlers by event kind.
 //
 // Mounted in app.ts *before* express.json() with a raw-body parser, because
 // the signature is an HMAC over the exact bytes Chapa sent. No requireAuth —
@@ -23,10 +28,24 @@ interface ChapaEvent {
    *  it `tx_ref`; transfer events `reference`. */
   tx_ref?: string;
   reference?: string;
-  /** "success" | "failed" (Chapa also uses `event: "charge.success"` /
+  /** "success" / "failed" (Chapa also uses `event: "charge.success"` or
    *  `"payout.success"`). */
   status?: string;
   event?: string;
+  /** Some payloads carry the kind here instead ("Charge" / "Transfer"). */
+  type?: string;
+}
+
+// Chapa's dashboard takes ONE webhook URL for every event. This tells the
+// two kinds apart so the single ingress below can route to the right
+// contract handler; unknown shapes fall back to which id field is present.
+function eventKind(event: ChapaEvent): "checkout" | "transfer" | null {
+  const tag = `${event.event ?? ""} ${event.type ?? ""}`.toLowerCase();
+  if (/payout|transfer/.test(tag)) return "transfer";
+  if (/charge|checkout|payment/.test(tag)) return "checkout";
+  if (event.tx_ref && !event.reference) return "checkout";
+  if (event.reference && !event.tx_ref) return "transfer";
+  return null;
 }
 
 function isSuccess(event: ChapaEvent): boolean {
@@ -66,9 +85,8 @@ async function pendingPaymentFor(event: ChapaEvent | null) {
 // Collection hop confirmed: the payer's money is in BuryMe's merchant
 // balance. Start the transfer to the recipient; the payment stays Pending
 // Acknowledgement until /transfer confirms it.
-webhooksRouter.post("/checkout", async (req, res, next) => {
-  try {
-    const event = readEvent(req);
+async function handleCheckout(event: ChapaEvent | null, res: Response): Promise<void> {
+  {
     const payment = await pendingPaymentFor(event);
     if (!payment || payment.chapaTransactionId) {
       // chapaTransactionId set means the transfer was already started by an
@@ -85,17 +103,15 @@ webhooksRouter.post("/checkout", async (req, res, next) => {
     }
 
     res.status(200).json({ received: true });
-  } catch (err) {
-    next(err);
   }
-});
+}
 
 // POST /webhooks/chapa/transfer — contract: chapaTransferWebhook.
 // Payout hop confirmed: the recipient has the money. Confirm the payment
-// and, for a disbursement, activate the obligation with the full principal.
-webhooksRouter.post("/transfer", async (req, res, next) => {
-  try {
-    const event = readEvent(req);
+// and apply it to the obligation (activate a disbursement; reduce / settle
+// a repayment — lib/payments.ts).
+async function handleTransfer(event: ChapaEvent | null, res: Response): Promise<void> {
+  {
     const payment = await pendingPaymentFor(event);
     if (!payment) {
       res.status(200).json({ received: true });
@@ -109,18 +125,7 @@ webhooksRouter.post("/transfer", async (req, res, next) => {
           where: { id: payment.id },
           data: { status: "Confirmed", confirmedAt: now },
         }),
-        ...(payment.paymentDirection === "Disbursement" &&
-        payment.obligation.status === "PendingDisbursement"
-          ? [
-              prisma.obligation.update({
-                where: { id: payment.obligationId },
-                data: {
-                  status: "Active",
-                  outstandingBalance: payment.obligation.principalAmount,
-                },
-              }),
-            ]
-          : []),
+        ...(await confirmedPaymentEffects(payment, payment.obligation)),
       ]);
     } else {
       // The money is sitting in BuryMe's balance but couldn't be paid out.
@@ -130,7 +135,34 @@ webhooksRouter.post("/transfer", async (req, res, next) => {
     }
 
     res.status(200).json({ received: true });
-  } catch (err) {
-    next(err);
   }
-});
+}
+
+function route(handler: (event: ChapaEvent | null, res: Response) => Promise<void>): RequestHandler {
+  return async (req, res, next) => {
+    try {
+      await handler(readEvent(req), res);
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+// The two contract endpoints — kept distinct (CLAUDE.md), each accepting
+// only its own kind of event.
+webhooksRouter.post("/checkout", route(handleCheckout));
+webhooksRouter.post("/transfer", route(handleTransfer));
+
+// POST /webhooks/chapa — the single URL registered in Chapa's dashboard.
+// Verifies once, works out which kind of event arrived, and hands it to
+// the matching handler above. Unrecognisable but correctly signed events
+// are acknowledged so Chapa stops retrying them.
+webhooksRouter.post(
+  "/",
+  route(async (event, res) => {
+    const kind = event ? eventKind(event) : null;
+    if (kind === "checkout") return handleCheckout(event, res);
+    if (kind === "transfer") return handleTransfer(event, res);
+    res.status(200).json({ received: true });
+  }),
+);

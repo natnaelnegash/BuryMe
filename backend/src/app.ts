@@ -6,6 +6,8 @@ import { authRouter } from "./routes/auth.js";
 import { usersRouter } from "./routes/users.js";
 import { requestsRouter } from "./routes/requests.js";
 import { obligationsRouter } from "./routes/obligations.js";
+import { groupExpensesRouter } from "./routes/groupExpenses.js";
+import { paymentsRouter } from "./routes/payments.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 
 // Express app construction, separated from index.ts's `listen()` call so
@@ -30,6 +32,8 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/requests", requestsRouter);
 app.use("/api/v1/obligations", obligationsRouter);
+app.use("/api/v1/payments", paymentsRouter);
+app.use("/api/v1/group-expenses", groupExpensesRouter);
 
 // Must be mounted last — Express only calls a 4-arg middleware as an error
 // handler when it comes after every route.

@@ -1,0 +1,28 @@
+/* Figma: Toggle (66:743). */
+
+.track {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-start;
+  width: 46px;
+  height: 26px;
+  padding: 3px;
+  border: none;
+  border-radius: 13px;
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.track.on {
+  justify-content: flex-end;
+  background: var(--color-teal);
+}
+
+.knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-white);
+}

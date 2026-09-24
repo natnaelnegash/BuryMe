@@ -21,6 +21,7 @@ const chapa = {
 vi.mock("../config/chapa.js", () => ({
   getChapaClient: () => chapa,
   chapaReturnUrl: (path: string) => `http://web${path}`,
+  chapaCallbackUrl: () => undefined,
 }));
 
 const { app } = await import("../app.js");
@@ -224,5 +225,83 @@ describe("POST /webhooks/chapa/transfer", () => {
       .set("Content-Type", "application/json")
       .send("not json");
     expect(res.status).toBe(200);
+  });
+});
+
+describe("POST /webhooks/chapa/transfer — repayments", () => {
+  it("reduces the balance and settles a Lump Sum obligation paid in full", async () => {
+    const { Prisma } = await import("../generated/prisma/client.js");
+    vi.mocked(prisma.payment.findUnique).mockResolvedValue(
+      pendingPayment({
+        paymentDirection: "Repayment",
+        amount: new Prisma.Decimal(1000),
+        obligation: {
+          id: "obl-1",
+          status: "Active",
+          repaymentType: "LumpSum",
+          principalAmount: new Prisma.Decimal(1000),
+          outstandingBalance: new Prisma.Decimal(1000),
+        },
+      }) as never,
+    );
+    const res = await request(app).post(TRANSFER).send({ reference: "pay-1", status: "success" });
+    expect(res.status).toBe(200);
+    const { data } = vi.mocked(prisma.obligation.update).mock.calls[0]![0] as {
+      data: { outstandingBalance: { toNumber(): number }; status?: string };
+    };
+    expect(data.outstandingBalance.toNumber()).toBe(0);
+    expect(data.status).toBe("Settled");
+  });
+});
+
+describe("POST /webhooks/chapa — single dashboard URL", () => {
+  const INGRESS = "/api/v1/webhooks/chapa";
+
+  beforeEach(() => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(borrower as never);
+    vi.mocked(prisma.telebirrAccount.findUnique).mockResolvedValue({
+      userId: borrower.id,
+      telebirrNumber: "0911111111",
+      verificationStatus: "Verified",
+    } as never);
+  });
+
+  it("rejects a bad signature", async () => {
+    chapa.verifyWebhookSignature.mockReturnValue(false);
+    const res = await request(app).post(INGRESS).send({ tx_ref: "pay-1", status: "success" });
+    expect(res.status).toBe(401);
+  });
+
+  it("routes a charge event to the checkout handler", async () => {
+    vi.mocked(prisma.payment.findUnique).mockResolvedValue(pendingPayment() as never);
+    chapa.initiateTransfer.mockResolvedValueOnce({ transferId: "tx-1" });
+    const res = await request(app)
+      .post(INGRESS)
+      .send({ event: "charge.success", tx_ref: "pay-1", status: "success" });
+    expect(res.status).toBe(200);
+    expect(chapa.initiateTransfer).toHaveBeenCalled();
+    expect(prisma.obligation.update).not.toHaveBeenCalled();
+  });
+
+  it("routes a payout event to the transfer handler", async () => {
+    vi.mocked(prisma.payment.findUnique).mockResolvedValue(pendingPayment() as never);
+    const res = await request(app)
+      .post(INGRESS)
+      .send({ event: "payout.success", reference: "pay-1", status: "success" });
+    expect(res.status).toBe(200);
+    expect(prisma.obligation.update).toHaveBeenCalled();
+    expect(chapa.initiateTransfer).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the id field when no event name is given", async () => {
+    vi.mocked(prisma.payment.findUnique).mockResolvedValue(pendingPayment() as never);
+    await request(app).post(INGRESS).send({ reference: "pay-1", status: "success" });
+    expect(prisma.obligation.update).toHaveBeenCalled();
+  });
+
+  it("acknowledges an unrecognisable but signed event", async () => {
+    const res = await request(app).post(INGRESS).send({ hello: "world" });
+    expect(res.status).toBe(200);
+    expect(prisma.payment.findUnique).not.toHaveBeenCalled();
   });
 });

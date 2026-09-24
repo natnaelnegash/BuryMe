@@ -11,7 +11,9 @@ interface ObligationCardProps {
   name: string;
   subtitle: string;
   amount: string;
-  status: string;
+  /** Omitted when the status isn't known to this viewer — the pill is then
+   * left out rather than guessed at. */
+  status?: string;
   direction: ObligationDirection;
   /** Route to the obligation's detail screen; makes the card a link. */
   to?: string;
@@ -37,9 +39,11 @@ export function ObligationCard({
       <div className={styles.textCol}>
         <span className={styles.name}>{name}</span>
         <span className={styles.subtitle}>{subtitle}</span>
-        <StatusPill size="small" status={PILL_BY_STATUS[status] ?? "gray"}>
-          {status}
-        </StatusPill>
+        {status && (
+          <StatusPill size="small" status={PILL_BY_STATUS[status] ?? "gray"}>
+            {status}
+          </StatusPill>
+        )}
       </div>
       <span className={[styles.amount, styles[direction]].join(" ")}>{amount}</span>
     </>

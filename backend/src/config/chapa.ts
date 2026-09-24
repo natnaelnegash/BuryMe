@@ -29,3 +29,12 @@ export function chapaReturnUrl(path: string): string {
   const origin = (process.env.WEB_ORIGIN || "http://localhost:5173").replace(/\/$/, "");
   return `${origin}${path}`;
 }
+
+// Public origin of this API, for Chapa's per-transaction `callback_url`.
+// Unset locally (Chapa can't reach localhost anyway — use a tunnel and set
+// it to the tunnel origin); the dashboard-level webhook URL still delivers
+// events regardless.
+export function chapaCallbackUrl(): string | undefined {
+  const origin = process.env.API_PUBLIC_ORIGIN?.replace(/\/$/, "");
+  return origin ? `${origin}/api/v1/webhooks/chapa` : undefined;
+}
