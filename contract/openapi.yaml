@@ -523,6 +523,15 @@ paths:
           in: query
           description: Comma-separated ObligationStatus values.
           schema: { type: string }
+        - name: origin
+          in: query
+          description: >
+            Filter by how the obligation came about. `personal` excludes
+            obligations spawned by a group expense; `group` returns only
+            those. Omitted returns both. Group-expense obligations are
+            surfaced to users through their expense (§8.12), so a list of
+            personal lending is the useful default view.
+          schema: { type: string, enum: [personal, group] }
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
       responses:
@@ -868,6 +877,41 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/SettlementSuggestion" }
+    post:
+      tags: [Settlements]
+      summary: Suggest settling two reciprocal obligations against each other
+      description: >
+        Either party may initiate once both obligations are open — whoever
+        acts first is the proposer, and their own response is recorded as
+        `Accepted` immediately, leaving the other party `Pending` (§8.14).
+        The server pairs the obligations itself: it requires exactly one
+        open obligation in each direction between the two users, and
+        `user_a` is always the initiator, so `obligation_id_a` is the
+        obligation the initiator borrows on. The net is the difference
+        between the two outstanding balances, owed by whoever owes more.
+        Nothing settles until both parties accept.
+      operationId: createSettlementSuggestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateSettlementSuggestionInput" }
+      responses:
+        "201":
+          description: Suggestion created, awaiting the other party's response.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SettlementSuggestion" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409":
+          description: >
+            `STATUS_CONFLICT` when there is no eligible reciprocal pair
+            between the two users, or more than one open obligation in
+            either direction; `DUPLICATE_SUBMISSION` when a pending
+            suggestion already exists for this pair.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /settlements/suggestions/{suggestionId}:
     get:
@@ -891,7 +935,7 @@ paths:
       description: >
         Records this user's response. The suggestion's aggregate `status` becomes
         `Accepted` — and both obligations move to `Settled` — only once both
-        `user_id_a_response` and `user_id_b_response` are `Accepted` (§8.14).
+        `user_a_response` and `user_b_response` are `Accepted` (§8.14).
       operationId: acceptSettlementSuggestion
       parameters:
         - $ref: "#/components/parameters/SuggestionId"
@@ -1172,7 +1216,65 @@ components:
       enum: [Created, Payment Confirmed, Terms Changed, Schedule Accepted, Settled, Disputed]
     NotificationReferenceType:
       type: string
-      enum: [Request, Obligation, Payment]
+      description: What `reference_id` points at, so the client knows which screen to open.
+      enum: [Request, Obligation, Payment, GroupExpense, SettlementSuggestion, TelebirrAccount]
+
+    NotificationType:
+      type: string
+      description: >
+        The §13.2 event catalog, keyed by its stable event id. The catalog is
+        the full product spec; the ids marked "not emitted" below describe
+        features that do not exist yet, and nothing raises them today:
+        TB-03 (needs a `Pending Payout Setup` obligation status), RS-01/02/03
+        (needs a schedule propose/accept/decline negotiation), OM-01/02/03
+        (needs obligation change proposals), PAY-06 (needs Chapa reversal
+        handling), GE-02 (needs obligation acknowledgement), BSS-01 (the
+        platform never auto-detects a pair — suggestions are user-initiated).
+        The four reminder events (RS-04, RS-05, RS-06, REM-01) are
+        time-triggered per §13.3 and await a scheduler.
+      enum:
+        [
+          TB-01,
+          TB-02,
+          TB-03,
+          BR-01,
+          BR-02,
+          BR-03,
+          BR-04,
+          BR-05,
+          BR-06,
+          RR-01,
+          GE-01,
+          GE-02,
+          RS-01,
+          RS-02,
+          RS-03,
+          RS-04,
+          RS-05,
+          RS-06,
+          OM-01,
+          OM-02,
+          OM-03,
+          PAY-01,
+          PAY-02,
+          PAY-03,
+          PAY-04,
+          PAY-05,
+          PAY-06,
+          PAY-07,
+          LR-01,
+          LR-02,
+          LR-03,
+          LR-04,
+          LR-05,
+          LR-06,
+          BSS-01,
+          BSS-02,
+          BSS-03,
+          BSS-04,
+          BSS-05,
+          REM-01,
+        ]
 
     # ── Shared value types ───────────────────────────────────────
     Money:
@@ -1266,7 +1368,8 @@ components:
       allOf:
         - $ref: "#/components/schemas/UserSummary"
         - type: object
-          required: [identifier, verification_status, telebirr, created_at]
+          required:
+            [identifier, verification_status, telebirr, notification_preferences, created_at]
           properties:
             identifier:
               type: string
@@ -1276,6 +1379,12 @@ components:
               allOf: [{ $ref: "#/components/schemas/TelebirrAccount" }]
               nullable: true
               description: Null until the user completes Telebirr verification (§6.1.3) — not set at registration.
+            notification_preferences:
+              allOf: [{ $ref: "#/components/schemas/NotificationPreferences" }]
+              description: >
+                Current push switches. Returned here rather than from a
+                dedicated GET so the preferences screen can render its state
+                from the session's own profile read.
             created_at: { type: string, format: date-time }
 
     # ── Requests (§8.5) ───────────────────────────────────────────
@@ -1578,14 +1687,7 @@ components:
       type: object
       description: §12.2.2 — 1–50 participants; assigned amounts (+ payer's own share, if included) must sum to total within 0.01 ETB.
       required:
-        [
-          total_amount,
-          description,
-          expense_date,
-          due_date,
-          payer_share_included,
-          participants,
-        ]
+        [total_amount, description, expense_date, due_date, payer_share_included, participants]
       properties:
         total_amount: { $ref: "#/components/schemas/Money" }
         description: { type: string, minLength: 3, maxLength: 200 }
@@ -1636,6 +1738,7 @@ components:
           due_date,
           payer_share_included,
           payer_share_amount,
+          outstanding_total,
           participants,
           created_at,
         ]
@@ -1654,6 +1757,13 @@ components:
           allOf: [{ $ref: "#/components/schemas/Money" }]
           nullable: true
           description: Recorded for accounting completeness only — no obligation is ever created against it.
+        outstanding_total:
+          allOf: [{ $ref: "#/components/schemas/Money" }]
+          description: >
+            Viewer-relative total still outstanding across this expense's
+            spawned obligations: for the payer, the sum all participants
+            still owe them; for a participant, their own remaining share.
+            Excludes the payer's own share, which is never an obligation.
         participants:
           type: array
           items: { $ref: "#/components/schemas/GroupExpenseParticipant" }
@@ -1662,6 +1772,22 @@ components:
     # ── Settlement Suggestions (§8.14) ─────────────────────────────
     SettlementSuggestion:
       type: object
+      required:
+        [
+          suggestion_id,
+          user_a,
+          user_b,
+          obligation_id_a,
+          obligation_id_b,
+          net_amount,
+          net_payer,
+          net_recipient,
+          user_a_response,
+          user_b_response,
+          status,
+          created_at,
+          resolved_at,
+        ]
       properties:
         suggestion_id: { type: string }
         user_a: { $ref: "#/components/schemas/UserSummary" }
@@ -1678,6 +1804,17 @@ components:
         status: { $ref: "#/components/schemas/SettlementResponse" }
         created_at: { type: string, format: date-time }
         resolved_at: { type: string, format: date-time, nullable: true }
+
+    CreateSettlementSuggestionInput:
+      type: object
+      required: [counterparty_user_id]
+      properties:
+        counterparty_user_id:
+          type: string
+          description: >
+            The other party. The server finds the reciprocal pair of open
+            obligations between the two users itself — the client never
+            names the obligations, so it cannot submit a mismatched pair.
 
     # ── Obligation History (§8.10) ─────────────────────────────────
     ObligationHistoryEntry:
@@ -1696,18 +1833,67 @@ components:
     # ── Notifications (§8.11) ──────────────────────────────────────
     Notification:
       type: object
+      required:
+        [
+          notification_id,
+          notification_type,
+          title,
+          body,
+          reference_id,
+          reference_type,
+          is_read,
+          delivered_at,
+          created_at,
+        ]
       properties:
         notification_id: { type: string }
-        notification_type:
+        notification_type: { $ref: "#/components/schemas/NotificationType" }
+        title:
           type: string
-          description: "Event that triggered the notification, e.g. New Request, Payment Confirmed, Change Proposed — see §13.2 event catalog."
-        reference_id: { type: string }
-        reference_type: { $ref: "#/components/schemas/NotificationReferenceType" }
+          description: >
+            Rendered at emit time from the §13.2 catalog's Title column.
+            Stored rather than composed per client so the web app, the
+            Flutter app and the FCM push payload all carry identical copy.
+        body:
+          type: string
+          description: Rendered at emit time from the §13.2 catalog's Body column, with names, amounts and dates already interpolated.
+        reference_id:
+          type: string
+          nullable: true
+          description: The entity to open. Null for the catalog's Dashboard-targeted events (LR-06, BSS-05).
+        reference_type:
+          allOf: [{ $ref: "#/components/schemas/NotificationReferenceType" }]
+          nullable: true
         is_read: { type: boolean }
         delivered_at: { type: string, format: date-time, nullable: true }
         created_at: { type: string, format: date-time }
     NotificationPreferences:
       type: object
-      description: Shape intentionally minimal pending §6.1.5 UI design — extend as concrete toggles are defined.
+      description: >
+        Per-category push switches (§7.1.5, §6.1.5). Each maps to a family of
+        §13.2 catalog events. These control push delivery only — every
+        notification is still written to the in-app feed whatever is set
+        here. All fields are optional on PATCH; omitted ones are left alone.
+      required: [requests, group_expenses, payments, schedules, settlements, reminders, telebirr]
       properties:
-        push_enabled: { type: boolean }
+        requests:
+          type: boolean
+          description: New borrow requests, counter-proposals, and lending records sent to you (BR-*, RR-01, LR-*).
+        group_expenses:
+          type: boolean
+          description: Shares assigned to you, acknowledgements, and consolidated expense updates (GE-*).
+        payments:
+          type: boolean
+          description: Chapa payments, external records waiting on your confirmation, and confirmed payments (PAY-*).
+        schedules:
+          type: boolean
+          description: Schedules proposed to you, accepted schedules, and installment changes (RS-01 through RS-03).
+        settlements:
+          type: boolean
+          description: Settlement suggestions, responses needed, and completed settlements (BSS-*).
+        reminders:
+          type: boolean
+          description: Upcoming and overdue installments, and payments still waiting on a response (RS-04 through RS-06, REM-01).
+        telebirr:
+          type: boolean
+          description: Prompts to verify Telebirr, and when someone you owe verifies theirs (TB-*).

@@ -568,7 +568,11 @@ export interface paths {
         /** List settlement suggestions involving the current user */
         get: operations["listSettlementSuggestions"];
         put?: never;
-        post?: never;
+        /**
+         * Suggest settling two reciprocal obligations against each other
+         * @description Either party may initiate once both obligations are open — whoever acts first is the proposer, and their own response is recorded as `Accepted` immediately, leaving the other party `Pending` (§8.14). The server pairs the obligations itself: it requires exactly one open obligation in each direction between the two users, and `user_a` is always the initiator, so `obligation_id_a` is the obligation the initiator borrows on. The net is the difference between the two outstanding balances, owed by whoever owes more. Nothing settles until both parties accept.
+         */
+        post: operations["createSettlementSuggestion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -603,7 +607,7 @@ export interface paths {
         put?: never;
         /**
          * Accept a settlement suggestion
-         * @description Records this user's response. The suggestion's aggregate `status` becomes `Accepted` — and both obligations move to `Settled` — only once both `user_id_a_response` and `user_id_b_response` are `Accepted` (§8.14).
+         * @description Records this user's response. The suggestion's aggregate `status` becomes `Accepted` — and both obligations move to `Settled` — only once both `user_a_response` and `user_b_response` are `Accepted` (§8.14).
          */
         post: operations["acceptSettlementSuggestion"];
         delete?: never;
@@ -754,8 +758,16 @@ export interface components {
         SettlementResponse: "Pending" | "Accepted" | "Declined";
         /** @enum {string} */
         ObligationHistoryEventType: "Created" | "Payment Confirmed" | "Terms Changed" | "Schedule Accepted" | "Settled" | "Disputed";
-        /** @enum {string} */
-        NotificationReferenceType: "Request" | "Obligation" | "Payment";
+        /**
+         * @description What `reference_id` points at, so the client knows which screen to open.
+         * @enum {string}
+         */
+        NotificationReferenceType: "Request" | "Obligation" | "Payment" | "GroupExpense" | "SettlementSuggestion" | "TelebirrAccount";
+        /**
+         * @description The §13.2 event catalog, keyed by its stable event id. The catalog is the full product spec; the ids marked "not emitted" below describe features that do not exist yet, and nothing raises them today: TB-03 (needs a `Pending Payout Setup` obligation status), RS-01/02/03 (needs a schedule propose/accept/decline negotiation), OM-01/02/03 (needs obligation change proposals), PAY-06 (needs Chapa reversal handling), GE-02 (needs obligation acknowledgement), BSS-01 (the platform never auto-detects a pair — suggestions are user-initiated). The four reminder events (RS-04, RS-05, RS-06, REM-01) are time-triggered per §13.3 and await a scheduler.
+         * @enum {string}
+         */
+        NotificationType: "TB-01" | "TB-02" | "TB-03" | "BR-01" | "BR-02" | "BR-03" | "BR-04" | "BR-05" | "BR-06" | "RR-01" | "GE-01" | "GE-02" | "RS-01" | "RS-02" | "RS-03" | "RS-04" | "RS-05" | "RS-06" | "OM-01" | "OM-02" | "OM-03" | "PAY-01" | "PAY-02" | "PAY-03" | "PAY-04" | "PAY-05" | "PAY-06" | "PAY-07" | "LR-01" | "LR-02" | "LR-03" | "LR-04" | "LR-05" | "LR-06" | "BSS-01" | "BSS-02" | "BSS-03" | "BSS-04" | "BSS-05" | "REM-01";
         /** @description All amounts in ETB, ≤2 decimal places (§12.1). */
         Money: {
             /** Format: double */
@@ -822,6 +834,8 @@ export interface components {
             verification_status: "Verified";
             /** @description Null until the user completes Telebirr verification (§6.1.3) — not set at registration. */
             telebirr: components["schemas"]["TelebirrAccount"] | null;
+            /** @description Current push switches. Returned here rather than from a dedicated GET so the preferences screen can render its state from the session's own profile read. */
+            notification_preferences: components["schemas"]["NotificationPreferences"];
             /** Format: date-time */
             created_at: string;
         };
@@ -1048,28 +1062,34 @@ export interface components {
             payer_share_included: boolean;
             /** @description Recorded for accounting completeness only — no obligation is ever created against it. */
             payer_share_amount: components["schemas"]["Money"] | null;
+            /** @description Viewer-relative total still outstanding across this expense's spawned obligations: for the payer, the sum all participants still owe them; for a participant, their own remaining share. Excludes the payer's own share, which is never an obligation. */
+            outstanding_total: components["schemas"]["Money"];
             participants: components["schemas"]["GroupExpenseParticipant"][];
             /** Format: date-time */
             created_at: string;
         };
         SettlementSuggestion: {
-            suggestion_id?: string;
-            user_a?: components["schemas"]["UserSummary"];
-            user_b?: components["schemas"]["UserSummary"];
+            suggestion_id: string;
+            user_a: components["schemas"]["UserSummary"];
+            user_b: components["schemas"]["UserSummary"];
             /** @description Active obligation where user_a is the borrower. */
-            obligation_id_a?: string;
+            obligation_id_a: string;
             /** @description Active obligation where user_b is the borrower. */
-            obligation_id_b?: string;
-            net_amount?: components["schemas"]["Money"];
-            net_payer?: components["schemas"]["UserSummary"];
-            net_recipient?: components["schemas"]["UserSummary"];
-            user_a_response?: components["schemas"]["SettlementResponse"];
-            user_b_response?: components["schemas"]["SettlementResponse"];
-            status?: components["schemas"]["SettlementResponse"];
+            obligation_id_b: string;
+            net_amount: components["schemas"]["Money"];
+            net_payer: components["schemas"]["UserSummary"];
+            net_recipient: components["schemas"]["UserSummary"];
+            user_a_response: components["schemas"]["SettlementResponse"];
+            user_b_response: components["schemas"]["SettlementResponse"];
+            status: components["schemas"]["SettlementResponse"];
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
             /** Format: date-time */
-            resolved_at?: string | null;
+            resolved_at: string | null;
+        };
+        CreateSettlementSuggestionInput: {
+            /** @description The other party. The server finds the reciprocal pair of open obligations between the two users itself — the client never names the obligations, so it cannot submit a mismatched pair. */
+            counterparty_user_id: string;
         };
         ObligationHistoryEntry: {
             history_id?: string;
@@ -1084,20 +1104,37 @@ export interface components {
             occurred_at?: string;
         };
         Notification: {
-            notification_id?: string;
-            /** @description Event that triggered the notification, e.g. New Request, Payment Confirmed, Change Proposed — see §13.2 event catalog. */
-            notification_type?: string;
-            reference_id?: string;
-            reference_type?: components["schemas"]["NotificationReferenceType"];
-            is_read?: boolean;
+            notification_id: string;
+            notification_type: components["schemas"]["NotificationType"];
+            /** @description Rendered at emit time from the §13.2 catalog's Title column. Stored rather than composed per client so the web app, the Flutter app and the FCM push payload all carry identical copy. */
+            title: string;
+            /** @description Rendered at emit time from the §13.2 catalog's Body column, with names, amounts and dates already interpolated. */
+            body: string;
+            /** @description The entity to open. Null for the catalog's Dashboard-targeted events (LR-06, BSS-05). */
+            reference_id: string | null;
+            reference_type: components["schemas"]["NotificationReferenceType"] | null;
+            is_read: boolean;
             /** Format: date-time */
-            delivered_at?: string | null;
+            delivered_at: string | null;
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
         };
-        /** @description Shape intentionally minimal pending §6.1.5 UI design — extend as concrete toggles are defined. */
+        /** @description Per-category push switches (§7.1.5, §6.1.5). Each maps to a family of §13.2 catalog events. These control push delivery only — every notification is still written to the in-app feed whatever is set here. All fields are optional on PATCH; omitted ones are left alone. */
         NotificationPreferences: {
-            push_enabled?: boolean;
+            /** @description New borrow requests, counter-proposals, and lending records sent to you (BR-*, RR-01, LR-*). */
+            requests: boolean;
+            /** @description Shares assigned to you, acknowledgements, and consolidated expense updates (GE-*). */
+            group_expenses: boolean;
+            /** @description Chapa payments, external records waiting on your confirmation, and confirmed payments (PAY-*). */
+            payments: boolean;
+            /** @description Schedules proposed to you, accepted schedules, and installment changes (RS-01 through RS-03). */
+            schedules: boolean;
+            /** @description Settlement suggestions, responses needed, and completed settlements (BSS-*). */
+            settlements: boolean;
+            /** @description Upcoming and overdue installments, and payments still waiting on a response (RS-04 through RS-06, REM-01). */
+            reminders: boolean;
+            /** @description Prompts to verify Telebirr, and when someone you owe verifies theirs (TB-*). */
+            telebirr: boolean;
         };
     };
     responses: {
@@ -1680,6 +1717,8 @@ export interface operations {
                 role?: "lender" | "borrower";
                 /** @description Comma-separated ObligationStatus values. */
                 status?: string;
+                /** @description Filter by how the obligation came about. `personal` excludes obligations spawned by a group expense; `group` returns only those. Omitted returns both. Group-expense obligations are surfaced to users through their expense (§8.12), so a list of personal lending is the useful default view. */
+                origin?: "personal" | "group";
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -2105,6 +2144,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SettlementSuggestion"][];
+                };
+            };
+        };
+    };
+    createSettlementSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSettlementSuggestionInput"];
+            };
+        };
+        responses: {
+            /** @description Suggestion created, awaiting the other party's response. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettlementSuggestion"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            /** @description `STATUS_CONFLICT` when there is no eligible reciprocal pair between the two users, or more than one open obligation in either direction; `DUPLICATE_SUBMISSION` when a pending suggestion already exists for this pair. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };

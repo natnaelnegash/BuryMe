@@ -249,7 +249,11 @@ export async function confirmedPaymentEffects(
   });
   if (!installment) return [];
   const unpaidOthers = await prisma.installment.count({
-    where: { scheduleId: installment.scheduleId, id: { not: installment.id }, status: { not: "Paid" } },
+    where: {
+      scheduleId: installment.scheduleId,
+      id: { not: installment.id },
+      status: { not: "Paid" },
+    },
   });
   const allPaid = unpaidOthers === 0;
 

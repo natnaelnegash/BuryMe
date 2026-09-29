@@ -78,9 +78,7 @@ export function RecordPaymentPage() {
     o.status === "Pending Disbursement" ? "Disbursement" : "Repayment";
   const recordable =
     (uid === o.lender.user_id || uid === o.borrower.user_id) &&
-    (o.status === "Active" ||
-      o.status === "Partially Paid" ||
-      o.status === "Pending Disbursement");
+    (o.status === "Active" || o.status === "Partially Paid" || o.status === "Pending Disbursement");
   if (!recordable) return <Navigate to={`/obligations/${o.obligation_id}`} replace />;
 
   const payable = (schedule?.installments ?? []).filter((i) => i.status !== "Paid");
@@ -216,7 +214,9 @@ export function RecordPaymentPage() {
           <Button
             type="submit"
             block
-            disabled={record.isPending || (direction === "Repayment" && schedule !== undefined && !selected)}
+            disabled={
+              record.isPending || (direction === "Repayment" && schedule !== undefined && !selected)
+            }
           >
             {record.isPending ? "Recording…" : "Record payment"}
           </Button>

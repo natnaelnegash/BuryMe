@@ -8,8 +8,10 @@ import { StatusPill } from "../components/ui/StatusPill.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useObligationsQuery } from "../hooks/useObligations.js";
 import { useRequestsQuery } from "../hooks/useRequests.js";
+import { useSettlementSuggestionsQuery } from "../hooks/useSettlements.js";
 import { formatMoney, formatSignedMoney } from "../lib/money.js";
 import { canRespond, requestStatusLabel } from "../lib/requests.js";
+import { settleablePairs } from "../lib/settlements.js";
 import styles from "./DashboardPage.module.css";
 
 function greetingFor(date: Date): string {
@@ -24,9 +26,29 @@ export function DashboardPage() {
   const uid = buryMeUser?.user_id;
   const { data: obligationPage } = useObligationsQuery();
   const { data: requestPage } = useRequestsQuery();
+  const { data: suggestions = [] } = useSettlementSuggestionsQuery();
 
   const obligations = obligationPage?.data ?? [];
   const requests = requestPage?.data ?? [];
+
+  // Settlements surface here (§8.14): suggestions waiting on the viewer,
+  // then pairs they could propose. A pair that already has a live
+  // suggestion is only offered once — as the response.
+  const awaitingMe = suggestions.filter((s) => {
+    if (s.status !== "Pending") return false;
+    return s.user_a.user_id === uid
+      ? s.user_a_response === "Pending"
+      : s.user_b_response === "Pending";
+  });
+  const livePartners = new Set(
+    suggestions
+      .filter((s) => s.status === "Pending")
+      .flatMap((s) => [s.user_a.user_id, s.user_b.user_id]),
+  );
+  const readyToSettle = settleablePairs(obligations, uid).filter(
+    (p) => !livePartners.has(p.counterparty.user_id),
+  );
+  const settlementCount = awaitingMe.length + readyToSettle.length;
 
   // Outstanding balances split by which side of the obligation you're on.
   const owedToYou = obligations
@@ -85,15 +107,52 @@ export function DashboardPage() {
 
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Needs your action</h2>
-        {needsAction.length > 0 && (
-          <StatusPill status="amber">{needsAction.length} waiting</StatusPill>
+        {needsAction.length + settlementCount > 0 && (
+          <StatusPill status="amber">{needsAction.length + settlementCount} waiting</StatusPill>
         )}
       </div>
 
-      {needsAction.length === 0 ? (
+      {needsAction.length + settlementCount === 0 ? (
         <p className={styles.empty}>Nothing needs your attention right now.</p>
       ) : (
         <div className={styles.actionList}>
+          {awaitingMe.map((s) => {
+            const counterparty = s.user_a.user_id === uid ? s.user_b : s.user_a;
+            const incoming = s.net_recipient.user_id === uid;
+            return (
+              <RequestRow
+                key={s.suggestion_id}
+                name={counterparty.display_name}
+                detail={`Settlement suggested  •  net ${formatMoney(s.net_amount)}`}
+                amount={formatSignedMoney(s.net_amount, incoming ? "incoming" : "outgoing")}
+                amountDirection={incoming ? "incoming" : "outgoing"}
+                status="Response needed"
+                actions={
+                  <Link to={`/settlements/${s.suggestion_id}`}>
+                    <Button size="small">Respond</Button>
+                  </Link>
+                }
+              />
+            );
+          })}
+
+          {readyToSettle.map((p) => (
+            <RequestRow
+              key={`ready-${p.counterparty.user_id}`}
+              name={p.counterparty.display_name}
+              detail={`Ready to settle  •  net ${formatMoney(p.netAmount)}`}
+              amount={formatSignedMoney(p.netAmount, p.netIncoming ? "incoming" : "outgoing")}
+              amountDirection={p.netIncoming ? "incoming" : "outgoing"}
+              status="Ready to settle"
+              statusColor="teal"
+              actions={
+                <Link to={`/settlements/new/${p.counterparty.user_id}`}>
+                  <Button size="small">Settle up</Button>
+                </Link>
+              }
+            />
+          ))}
+
           {needsAction.map((r) => {
             const incoming = r.receiving_user.user_id === uid && r.request_type !== "Repayment";
             const counterparty =

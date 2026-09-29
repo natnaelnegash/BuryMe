@@ -74,12 +74,15 @@ export function MakePaymentPage() {
 
   function handlePay() {
     if (!o) return;
-    pay.mutate({ obligationId: o.obligation_id, ...(installmentId ? { installmentId } : {}) }, {
-      onSuccess: (payment) => {
-        if (payment.checkout_url) window.location.assign(payment.checkout_url);
-        else navigate(`/obligations/${o.obligation_id}`, { state: { paymentStarted: true } });
+    pay.mutate(
+      { obligationId: o.obligation_id, ...(installmentId ? { installmentId } : {}) },
+      {
+        onSuccess: (payment) => {
+          if (payment.checkout_url) window.location.assign(payment.checkout_url);
+          else navigate(`/obligations/${o.obligation_id}`, { state: { paymentStarted: true } });
+        },
       },
-    });
+    );
   }
 
   return (
@@ -141,7 +144,11 @@ export function MakePaymentPage() {
         )}
 
         <div className={styles.actions}>
-          <Button block disabled={pay.isPending || (schedule !== undefined && !selected)} onClick={handlePay}>
+          <Button
+            block
+            disabled={pay.isPending || (schedule !== undefined && !selected)}
+            onClick={handlePay}
+          >
             {pay.isPending ? "Opening checkout…" : `Pay ${amount} via Telebirr`}
           </Button>
           <Button

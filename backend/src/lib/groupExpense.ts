@@ -23,7 +23,12 @@ export async function assertValidGroupExpense(
   const dueDate = new Date(body.due_date);
 
   if (expenseDate.getTime() > today.getTime()) {
-    throw new ApiError("VALIDATION_ERROR", "The expense date can't be in the future.", 400, "expense_date");
+    throw new ApiError(
+      "VALIDATION_ERROR",
+      "The expense date can't be in the future.",
+      400,
+      "expense_date",
+    );
   }
   if (dueDate.getTime() < expenseDate.getTime()) {
     throw new ApiError(
@@ -36,7 +41,12 @@ export async function assertValidGroupExpense(
   const maxDue = new Date(today);
   maxDue.setFullYear(maxDue.getFullYear() + 3);
   if (dueDate.getTime() > maxDue.getTime()) {
-    throw new ApiError("VALIDATION_ERROR", "The due date can't be more than 3 years away.", 400, "due_date");
+    throw new ApiError(
+      "VALIDATION_ERROR",
+      "The due date can't be more than 3 years away.",
+      400,
+      "due_date",
+    );
   }
 
   if (body.payer_share_included && !body.payer_share_amount) {
@@ -58,7 +68,12 @@ export async function assertValidGroupExpense(
 
   const ids = body.participants.map((p) => p.participant_user_id);
   if (new Set(ids).size !== ids.length) {
-    throw new ApiError("VALIDATION_ERROR", "Each participant can only appear once.", 400, "participants");
+    throw new ApiError(
+      "VALIDATION_ERROR",
+      "Each participant can only appear once.",
+      400,
+      "participants",
+    );
   }
   if (ids.includes(payerId)) {
     throw new ApiError(

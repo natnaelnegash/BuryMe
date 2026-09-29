@@ -7,6 +7,24 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     obligation: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    // Read by the push path when a notification fires.
+    user: { findUnique: vi.fn() },
+    // Notifications are raised as a side effect of most of these routes.
+    // Mocked with a resolved row so the emit path runs to completion
+    // instead of failing silently inside notify()'s catch.
+    notification: {
+      create: vi.fn().mockResolvedValue({
+        id: "ntf-1",
+        notificationType: "",
+        title: "",
+        body: "",
+        isRead: false,
+        createdAt: new Date("2026-09-28T00:00:00.000Z"),
+        referenceId: null,
+        referenceType: null,
+      }),
+      update: vi.fn(),
+    },
     request: { create: vi.fn(), findUnique: vi.fn() },
     telebirrAccount: { findUnique: vi.fn() },
     payment: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
@@ -109,6 +127,44 @@ describe("GET /obligations/:id", () => {
     const res = await request(app).get("/api/v1/obligations/obl-1").set(LENDER_AUTH);
     expect(res.status).toBe(200);
     expect(res.body.originating_expense_id).toBe("exp-1");
+  });
+});
+
+describe("GET /obligations", () => {
+  // Group-expense shares are surfaced through their expense, so the
+  // personal list must exclude them at the query rather than in the client
+  // (filtering a page client-side would break the cursor).
+  it("excludes group-expense obligations when origin=personal", async () => {
+    vi.mocked(prisma.obligation.findMany).mockResolvedValue([baseObligation()] as never);
+    const res = await request(app).get("/api/v1/obligations?origin=personal").set(LENDER_AUTH);
+    expect(res.status).toBe(200);
+    expect(prisma.obligation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ originatingExpenseId: null }),
+      }),
+    );
+  });
+
+  it("returns only group-expense obligations when origin=group", async () => {
+    vi.mocked(prisma.obligation.findMany).mockResolvedValue([] as never);
+    const res = await request(app).get("/api/v1/obligations?origin=group").set(LENDER_AUTH);
+    expect(res.status).toBe(200);
+    expect(prisma.obligation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ originatingExpenseId: { not: null } }),
+      }),
+    );
+  });
+
+  it("returns both when origin is omitted", async () => {
+    vi.mocked(prisma.obligation.findMany).mockResolvedValue([baseObligation()] as never);
+    const res = await request(app).get("/api/v1/obligations").set(LENDER_AUTH);
+    expect(res.status).toBe(200);
+    const where = vi.mocked(prisma.obligation.findMany).mock.calls[0]![0]!.where as Record<
+      string,
+      unknown
+    >;
+    expect(where).not.toHaveProperty("originatingExpenseId");
   });
 });
 
@@ -583,7 +639,9 @@ describe("GET /obligations/:id/schedule", () => {
         data: expect.objectContaining({
           obligationId: "obl-1",
           installmentCount: 2,
-          installments: { create: expect.arrayContaining([expect.objectContaining({ amount: 500 })]) },
+          installments: {
+            create: expect.arrayContaining([expect.objectContaining({ amount: 500 })]),
+          },
         }),
       }),
     );
@@ -673,23 +731,23 @@ describe("Installments payments", () => {
 
   it("lets the lender request repayment of an Overdue installment only", async () => {
     vi.mocked(prisma.obligation.findFirst).mockResolvedValue(installmentsObligation() as never);
-    vi.mocked(prisma.request.create).mockImplementation(
-      (async (args: { data: Record<string, unknown> }) => ({
-        id: "req-9",
-        ...args.data,
-        amount: { toNumber: () => 500 },
-        proposedSchedule: null,
-        counterProposal: null,
-        proposedRepaymentType: null,
-        proposedDueDate: null,
-        disbursementMethod: null,
-        purpose: null,
-        createdAt: new Date("2026-09-19T00:00:00.000Z"),
-        respondedAt: null,
-        initiatingUser: lender,
-        receivingUser: borrower,
-      })) as never,
-    );
+    vi.mocked(prisma.request.create).mockImplementation((async (args: {
+      data: Record<string, unknown>;
+    }) => ({
+      id: "req-9",
+      ...args.data,
+      amount: { toNumber: () => 500 },
+      proposedSchedule: null,
+      counterProposal: null,
+      proposedRepaymentType: null,
+      proposedDueDate: null,
+      disbursementMethod: null,
+      purpose: null,
+      createdAt: new Date("2026-09-19T00:00:00.000Z"),
+      respondedAt: null,
+      initiatingUser: lender,
+      receivingUser: borrower,
+    })) as never);
 
     const pending = await request(app)
       .post("/api/v1/obligations/obl-1/repayment-requests")

@@ -7,7 +7,25 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     payment: { findUnique: vi.fn(), update: vi.fn() },
-    obligation: { update: vi.fn() },
+    // Read by the push path when a notification fires.
+    user: { findUnique: vi.fn() },
+    // Notifications are raised as a side effect of most of these routes.
+    // Mocked with a resolved row so the emit path runs to completion
+    // instead of failing silently inside notify()'s catch.
+    notification: {
+      create: vi.fn().mockResolvedValue({
+        id: "ntf-1",
+        notificationType: "",
+        title: "",
+        body: "",
+        isRead: false,
+        createdAt: new Date("2026-09-28T00:00:00.000Z"),
+        referenceId: null,
+        referenceType: null,
+      }),
+      update: vi.fn(),
+    },
+    obligation: { update: vi.fn(), findUnique: vi.fn() },
     installment: { findUnique: vi.fn(), count: vi.fn(), update: vi.fn() },
     repaymentSchedule: { update: vi.fn() },
     $transaction: vi.fn(async (ops: unknown[]) => Promise.all(ops)),
@@ -145,6 +163,29 @@ describe("POST /payments/:id/acknowledge", () => {
     };
     expect(data.outstandingBalance.toNumber()).toBe(0);
     expect(data.status).toBe("Settled");
+
+    // PAY-04 back to the lender who recorded it, then PAY-07 to both
+    // parties. The settled read is what the notification path re-fetches
+    // after the transaction, so it has to look settled.
+    vi.mocked(prisma.obligation.findUnique).mockResolvedValue(
+      activeObligation({
+        status: "Settled",
+        outstandingBalance: new Prisma.Decimal(0),
+        borrower,
+        lender,
+      }) as never,
+    );
+    await vi.waitFor(() =>
+      expect(vi.mocked(prisma.notification.create).mock.calls.length).toBeGreaterThanOrEqual(1),
+    );
+    const sent = vi
+      .mocked(prisma.notification.create)
+      .mock.calls.map((c) => (c[0] as { data: Record<string, unknown> }).data);
+    expect(sent.find((d) => d.notificationType === "PAY-04")).toMatchObject({
+      userId: lender.id,
+      title: "Payment confirmed",
+      body: "Borrower confirmed the 1,000 ETB external payment.",
+    });
   });
 
   it("activates a Pending Disbursement obligation for an external disbursement", async () => {
@@ -225,9 +266,7 @@ describe("acknowledge — installments", () => {
   });
 
   it("settles the obligation and completes the schedule on the last installment", async () => {
-    vi.mocked(prisma.payment.findUnique).mockResolvedValue(
-      installmentPayment() as never,
-    );
+    vi.mocked(prisma.payment.findUnique).mockResolvedValue(installmentPayment() as never);
     vi.mocked(prisma.installment.count).mockResolvedValue(0);
 
     const res = await request(app).post("/api/v1/payments/pay-1/acknowledge").set(BORROWER_AUTH);

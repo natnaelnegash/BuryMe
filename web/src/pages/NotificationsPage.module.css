@@ -1,0 +1,57 @@
+/* Figma: Screen — Notification Feed (37:1443 / body 37:1472). Body stack
+ * is 24; the row list (37:1481) is a full-width vertical stack at 12. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.back {
+  align-self: flex-start;
+  font: var(--text-link);
+  color: var(--color-text-gray);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--color-text-dark);
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* "State — Empty Notifications" (39:1841): radius 18, 28 padding, centred. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px;
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--elevation-card);
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}
+
+.headRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}

@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { prisma } from "../db/client.js";
+import { etb, notify, notifyBoth } from "../lib/notifications.js";
 import { scheduleCreateInput } from "../lib/schedule.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
@@ -185,6 +186,17 @@ requestsRouter.post("/", async (req, res, next) => {
       },
       include: WITH_USERS,
     });
+
+    // §13.2: BR-01 to the lender, LR-01 to the borrower. Repayment requests
+    // returned above and raise RR-01 from lib/repayment.ts, which is the one
+    // place both entry points go through.
+    void notify({
+      userId: request.receivingUserId,
+      type: request.requestType === "Lend" ? "LR-01" : "BR-01",
+      params: { name: request.initiatingUser.displayName, amount: etb(request.amount) },
+      referenceId: request.id,
+    });
+
     res.status(201).json(toRequestResponse(request));
   } catch (err) {
     next(err);
@@ -220,6 +232,16 @@ requestsRouter.post("/:requestId/counter", async (req, res, next) => {
       data: { counterProposal: body, status: "Countered", respondedAt: new Date() },
       include: WITH_USERS,
     });
+
+    // The counter always travels back to whoever opened the request:
+    // BR-04 on a Borrow, LR-02 on a lending record.
+    void notify({
+      userId: updated.initiatingUserId,
+      type: updated.requestType === "Lend" ? "LR-02" : "BR-04",
+      params: { name: updated.receivingUser.displayName, amount: etb(updated.amount) },
+      referenceId: updated.id,
+    });
+
     res.status(200).json(toRequestResponse(updated));
   } catch (err) {
     next(err);
@@ -277,7 +299,9 @@ requestsRouter.post("/:requestId/accept", async (req, res, next) => {
       request.requestType === "Borrow" ? request.receivingUserId : request.initiatingUserId;
     const isActive = disbursementMethod === "AlreadyGiven";
 
-    const [updatedRequest] = await prisma.$transaction([
+    const wasCountered = request.status === "Countered";
+
+    const [updatedRequest, obligation] = await prisma.$transaction([
       prisma.request.update({
         where: { id: request.id },
         data: { status: "Accepted", respondedAt: new Date() },
@@ -304,6 +328,47 @@ requestsRouter.post("/:requestId/accept", async (req, res, next) => {
       }),
     ]);
 
+    // §13.2 on acceptance. A Borrow closes with BR-02 (or BR-05 when it was
+    // the counter-proposal being accepted). A lending record is LR-03 to
+    // both parties when the money already changed hands, or LR-04 nudging
+    // the lender to disburse when it hasn't.
+    // The agreed figure, not a field read back off the created row — the
+    // obligation write returns only what the caller selected.
+    const amount = etb(terms.amount);
+    if (updatedRequest.requestType === "Borrow") {
+      void notify({
+        userId: wasCountered ? updatedRequest.receivingUserId : updatedRequest.initiatingUserId,
+        type: wasCountered ? "BR-05" : "BR-02",
+        params: {
+          name: wasCountered
+            ? updatedRequest.initiatingUser.displayName
+            : updatedRequest.receivingUser.displayName,
+          amount,
+        },
+        referenceId: obligation.id,
+      });
+    } else if (isActive) {
+      void notifyBoth(
+        [borrowerId, lenderId],
+        "LR-03",
+        (userId) => ({
+          name:
+            userId === borrowerId
+              ? updatedRequest.initiatingUser.displayName
+              : updatedRequest.receivingUser.displayName,
+          amount,
+        }),
+        obligation.id,
+      );
+    } else {
+      void notify({
+        userId: lenderId,
+        type: "LR-04",
+        params: { name: updatedRequest.receivingUser.displayName, amount },
+        referenceId: obligation.id,
+      });
+    }
+
     res.status(200).json(toRequestResponse(updatedRequest));
   } catch (err) {
     next(err);
@@ -323,11 +388,29 @@ requestsRouter.post("/:requestId/decline", async (req, res, next) => {
     if (!canAct) {
       throw new ApiError("STATUS_CONFLICT", "This request cannot be declined right now.", 409);
     }
+    const wasCountered = request.status === "Countered";
     const updated = await prisma.request.update({
       where: { id: request.id },
       data: { status: "Declined", respondedAt: new Date() },
       include: WITH_USERS,
     });
+
+    // Declining a counter-proposal (BR-06) is a different event from
+    // declining the original request (BR-03 / LR-06), and travels the other
+    // way. LR-06 has no reference — the catalog sends it to the Dashboard.
+    const declinedByInitiator = wasCountered;
+    void notify({
+      userId: declinedByInitiator ? updated.receivingUserId : updated.initiatingUserId,
+      type: updated.requestType === "Lend" ? "LR-06" : declinedByInitiator ? "BR-06" : "BR-03",
+      params: {
+        name: declinedByInitiator
+          ? updated.initiatingUser.displayName
+          : updated.receivingUser.displayName,
+        amount: etb(updated.amount),
+      },
+      referenceId: updated.id,
+    });
+
     res.status(200).json(toRequestResponse(updated));
   } catch (err) {
     next(err);

@@ -347,7 +347,9 @@ export function ObligationDetailPage() {
                   block
                   disabled={!repayable}
                   onClick={() => navigate(`/obligations/${o.obligation_id}/record`)}
-                  {...(!repayable ? { reason: "Only an active obligation can take a payment" } : {})}
+                  {...(!repayable
+                    ? { reason: "Only an active obligation can take a payment" }
+                    : {})}
                 >
                   Record External Payment
                 </Button>

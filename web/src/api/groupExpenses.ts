@@ -8,9 +8,7 @@ export interface GroupExpensePage {
 }
 
 export const listGroupExpenses = (params?: { role?: "payer" | "participant" }) =>
-  apiClient.get<GroupExpensePage>(
-    `/group-expenses${params?.role ? `?role=${params.role}` : ""}`,
-  );
+  apiClient.get<GroupExpensePage>(`/group-expenses${params?.role ? `?role=${params.role}` : ""}`);
 
 export const getGroupExpense = (expenseId: string) =>
   apiClient.get<Schemas["GroupExpense"]>(`/group-expenses/${encodeURIComponent(expenseId)}`);

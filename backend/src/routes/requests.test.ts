@@ -7,6 +7,22 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     user: { findUnique: vi.fn() },
+    // Notifications are raised as a side effect of most of these routes.
+    // Mocked with a resolved row so the emit path runs to completion
+    // instead of failing silently inside notify()'s catch.
+    notification: {
+      create: vi.fn().mockResolvedValue({
+        id: "ntf-1",
+        notificationType: "",
+        title: "",
+        body: "",
+        isRead: false,
+        createdAt: new Date("2026-09-28T00:00:00.000Z"),
+        referenceId: null,
+        referenceType: null,
+      }),
+      update: vi.fn(),
+    },
     request: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
     obligation: { findUnique: vi.fn(), create: vi.fn() },
     $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
@@ -126,6 +142,21 @@ describe("POST /requests (Borrow/Lend)", () => {
       });
     expect(res.status).toBe(201);
     expect(res.body.status).toBe("Pending");
+
+    // §13.2 BR-01 goes to the lender, carrying the borrower's name.
+    await vi.waitFor(() => expect(prisma.notification.create).toHaveBeenCalled());
+    const data = vi.mocked(prisma.notification.create).mock.calls[0]![0]!.data as Record<
+      string,
+      unknown
+    >;
+    expect(data).toMatchObject({
+      userId: lender.id,
+      notificationType: "BR-01",
+      title: "New Borrow Request",
+      body: "Borrower is requesting 1,000 ETB. Tap to review.",
+      referenceType: "Request",
+      referenceId: "req-1",
+    });
   });
 });
 

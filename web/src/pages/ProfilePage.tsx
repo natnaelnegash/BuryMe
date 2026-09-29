@@ -68,6 +68,19 @@ export function ProfilePage() {
           }
         />
         <SummaryRow
+          label="Notifications"
+          value="Push preferences"
+          action={
+            <Button
+              kind="secondary"
+              size="small"
+              onClick={() => navigate("/notifications/preferences")}
+            >
+              Manage
+            </Button>
+          }
+        />
+        <SummaryRow
           label="Member since"
           value={memberSince(buryMeUser.created_at)}
           divider={false}

@@ -101,7 +101,8 @@ export function GroupExpenseFlowPage() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (description.trim().length < 3) return setStepError("Give this expense a short description.");
+    if (description.trim().length < 3)
+      return setStepError("Give this expense a short description.");
     if (!(totalNumber > 0)) return setStepError("Enter the total amount.");
     if (!dueDate) return setStepError("Choose when the shares are due back.");
     if (selected.some((p) => !(Number(shares[p.user_id]) > 0))) {

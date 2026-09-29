@@ -8,10 +8,11 @@
 // comment naming the contract/openapi.yaml component schema it maps to, so
 // drift between the two is visible at a glance.
 //
-// Currently scoped through Slice 7 (group expenses): User, TelebirrAccount,
+// Currently scoped through Slice 9 (notifications): User, TelebirrAccount,
 // FcmToken (Slice 1); Request, Obligation (Slice 3); Payment (Slice 4);
 // RepaymentSchedule, Installment (Slice 6); GroupExpense,
-// GroupExpenseParticipant (Slice 7).
+// GroupExpenseParticipant (Slice 7); SettlementSuggestion (Slice 8);
+// Notification (Slice 9).
 
 generator client {
   provider = "prisma-client"
@@ -40,6 +41,18 @@ model User {
   verificationStatus String   @default("Verified") @map("verification_status")
   createdAt          DateTime @default(now()) @map("created_at")
 
+  // Contract `NotificationPreferences` (§7.1.5) — one switch per §13.2
+  // event family, matching the seven rows of the preferences screen
+  // (66:744). Push delivery only: the feed row is always written.
+  // Default on, except the two the design ships off.
+  prefRequests      Boolean @default(true) @map("pref_requests")
+  prefGroupExpenses Boolean @default(false) @map("pref_group_expenses")
+  prefPayments      Boolean @default(true) @map("pref_payments")
+  prefSchedules     Boolean @default(true) @map("pref_schedules")
+  prefSettlements   Boolean @default(true) @map("pref_settlements")
+  prefReminders     Boolean @default(false) @map("pref_reminders")
+  prefTelebirr      Boolean @default(true) @map("pref_telebirr")
+
   telebirrAccount TelebirrAccount?
   fcmTokens       FcmToken[]
 
@@ -51,6 +64,13 @@ model User {
   paymentsReceived  Payment[]    @relation("PaymentsReceived")
   expensesPaid      GroupExpense[]            @relation("ExpensesPaid")
   expenseShares     GroupExpenseParticipant[] @relation("ExpenseShares")
+
+  settlementsAsA     SettlementSuggestion[] @relation("SettlementsAsA")
+  settlementsAsB     SettlementSuggestion[] @relation("SettlementsAsB")
+  settlementsToPay   SettlementSuggestion[] @relation("SettlementNetPayer")
+  settlementsToReceive SettlementSuggestion[] @relation("SettlementNetRecipient")
+
+  notifications Notification[] @relation("UserNotifications")
 
   @@map("users")
 }
@@ -175,6 +195,12 @@ model Obligation {
   // Set when this obligation was spawned by a group expense (Slice 7).
   originatingExpenseId String?                  @unique @map("originating_expense_id")
   originatingExpense   GroupExpenseParticipant? @relation(fields: [originatingExpenseId], references: [id])
+
+  // Settlement suggestions this obligation is one half of (Slice 8). Not
+  // unique: a declined suggestion leaves the obligation free to be paired
+  // again.
+  settlementsAsA SettlementSuggestion[] @relation("SettlementObligationA")
+  settlementsAsB SettlementSuggestion[] @relation("SettlementObligationB")
 
   @@map("obligations")
 }
@@ -360,4 +386,82 @@ model GroupExpenseParticipant {
   @@unique([expenseId, participantId])
   @@index([expenseId])
   @@map("group_expense_participants")
+}
+
+// Maps to contract `SettlementSuggestion` (§8.14) — a proposal to net two
+// reciprocal obligations against each other. `userA` is always the
+// initiator, so `obligationA` is the obligation the initiator borrows on,
+// matching the contract's description of `obligation_id_a`. Both parties
+// must accept before either obligation settles; the pair is only recorded
+// here, no money moves through the platform.
+model SettlementSuggestion {
+  id        String    @id @default(uuid())
+  netAmount Decimal   @map("net_amount") @db.Decimal(12, 2)
+  createdAt DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+
+  userAId String @map("user_a_id")
+  userA   User   @relation("SettlementsAsA", fields: [userAId], references: [id])
+
+  userBId String @map("user_b_id")
+  userB   User   @relation("SettlementsAsB", fields: [userBId], references: [id])
+
+  // The obligation each party borrows on — A owes on obligationA.
+  obligationAId String     @map("obligation_a_id")
+  obligationA   Obligation @relation("SettlementObligationA", fields: [obligationAId], references: [id])
+
+  obligationBId String     @map("obligation_b_id")
+  obligationB   Obligation @relation("SettlementObligationB", fields: [obligationBId], references: [id])
+
+  // Whoever owes more after netting, and who receives the difference.
+  netPayerId String @map("net_payer_id")
+  netPayer   User   @relation("SettlementNetPayer", fields: [netPayerId], references: [id])
+
+  netRecipientId String @map("net_recipient_id")
+  netRecipient   User   @relation("SettlementNetRecipient", fields: [netRecipientId], references: [id])
+
+  userAResponse SettlementResponse @default(Pending) @map("user_a_response")
+  userBResponse SettlementResponse @default(Pending) @map("user_b_response")
+  status        SettlementResponse @default(Pending)
+
+  @@index([userAId])
+  @@index([userBId])
+  @@map("settlement_suggestions")
+}
+
+// Maps to contract `SettlementResponse` enum exactly.
+enum SettlementResponse {
+  Pending
+  Accepted
+  Declined
+}
+
+// Maps to contract `Notification` (§8.11). `title` and `body` are rendered
+// from the §13.2 catalog when the event fires and stored here, so the feed,
+// the Flutter app and the FCM push payload all read identical copy.
+// `notificationType` holds the catalog's event id (e.g. "BSS-02"); it is a
+// plain String rather than a Prisma enum because the ids contain hyphens,
+// which Prisma enum members can't express, and the contract's
+// NotificationType enum is the authority.
+model Notification {
+  id               String    @id @default(uuid())
+  notificationType String    @map("notification_type")
+  title            String
+  body             String
+  isRead           Boolean   @default(false) @map("is_read")
+  deliveredAt      DateTime? @map("delivered_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  userId String @map("user_id")
+  user   User   @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  // What to open when tapped. Null for the catalog's Dashboard-targeted
+  // events, so these aren't foreign keys — the referenced row may also be
+  // one the recipient can no longer see.
+  referenceId   String? @map("reference_id")
+  referenceType String? @map("reference_type")
+
+  // The feed is read newest-first, scoped to one user.
+  @@index([userId, createdAt])
+  @@map("notifications")
 }

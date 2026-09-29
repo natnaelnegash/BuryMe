@@ -1,6 +1,7 @@
 import type { Schemas } from "@buryme/shared";
 
 import type { TelebirrAccount, User } from "../generated/prisma/client.js";
+import { toNotificationPreferencesResponse } from "../lib/notificationPrefs.js";
 
 type UserWithTelebirr = User & { telebirrAccount: TelebirrAccount | null };
 
@@ -32,6 +33,7 @@ export function toUserResponse(user: UserWithTelebirr): Schemas["User"] {
     // unverified BuryMe profile exists.
     verification_status: "Verified",
     telebirr: user.telebirrAccount ? toTelebirrAccountResponse(user.telebirrAccount) : null,
+    notification_preferences: toNotificationPreferencesResponse(user),
     created_at: user.createdAt.toISOString(),
   };
 }

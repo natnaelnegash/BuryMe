@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../hooks/useAuth.js";
+import { useUnreadCount } from "../../hooks/useNotifications.js";
 import styles from "./TopNav.module.css";
 
 // Mirrors the Figma component set's `Active` variant axis
@@ -18,6 +19,7 @@ function isActive(pathname: string, to: string): boolean {
 
 export function TopNav() {
   const { pathname } = useLocation();
+  const unreadCount = useUnreadCount();
   const { buryMeUser } = useAuth();
   const initial = buryMeUser?.display_name?.trim().charAt(0).toUpperCase() ?? "?";
 
@@ -52,11 +54,13 @@ export function TopNav() {
           + &nbsp;New
         </Link>
 
-        {/* Notifications are Slice 9 — no feed exists yet, so the bell is
-            present for layout fidelity but deliberately inert. */}
-        <span className={styles.bell} aria-hidden="true">
-          🔔
-        </span>
+        {/* The bell opens the feed (37:1443) and carries an unread count. */}
+        <Link className={styles.bell} to="/notifications" aria-label="Notifications">
+          <span aria-hidden="true">🔔</span>
+          {unreadCount > 0 && (
+            <span className={styles.badge}>{unreadCount > 9 ? "9+" : unreadCount}</span>
+          )}
+        </Link>
 
         <Link className={styles.avatar} to="/profile" aria-label="Profile">
           {initial}

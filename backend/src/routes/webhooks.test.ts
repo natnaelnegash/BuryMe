@@ -7,7 +7,23 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     payment: { findUnique: vi.fn(), update: vi.fn() },
-    obligation: { update: vi.fn() },
+    // Notifications are raised as a side effect of most of these routes.
+    // Mocked with a resolved row so the emit path runs to completion
+    // instead of failing silently inside notify()'s catch.
+    notification: {
+      create: vi.fn().mockResolvedValue({
+        id: "ntf-1",
+        notificationType: "",
+        title: "",
+        body: "",
+        isRead: false,
+        createdAt: new Date("2026-09-28T00:00:00.000Z"),
+        referenceId: null,
+        referenceType: null,
+      }),
+      update: vi.fn(),
+    },
+    obligation: { update: vi.fn(), findUnique: vi.fn() },
     user: { findUnique: vi.fn() },
     telebirrAccount: { findUnique: vi.fn() },
     $transaction: vi.fn(async (ops: unknown[]) => ops),
@@ -31,20 +47,28 @@ const CHECKOUT = "/api/v1/webhooks/chapa/checkout";
 const TRANSFER = "/api/v1/webhooks/chapa/transfer";
 
 const borrower = { id: "borrower-1", displayName: "Borrower" };
+const lender = { id: "lender-1", displayName: "Lender" };
 
 function pendingPayment(overrides: Record<string, unknown> = {}) {
   return {
     id: "pay-1",
     obligationId: "obl-1",
+    payerId: lender.id,
     recipientId: borrower.id,
     amount: { toNumber: () => 1000 },
     paymentDirection: "Disbursement",
     status: "PendingAcknowledgement",
     chapaTransactionId: null,
+    // Both parties are included on the notification path's re-read
+    // (lib/notifications.ts), which quotes names and the post-payment
+    // balance.
+    payer: lender,
+    recipient: borrower,
     obligation: {
       id: "obl-1",
       status: "PendingDisbursement",
       principalAmount: { toNumber: () => 1000 },
+      outstandingBalance: { toNumber: () => 0 },
     },
     ...overrides,
   };
@@ -201,6 +225,22 @@ describe("POST /webhooks/chapa/transfer", () => {
       data: { status: "Active", outstandingBalance: expect.anything() },
     });
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+
+    // LR-05 to both parties, each naming the lender who sent the funds.
+    await vi.waitFor(() =>
+      expect(vi.mocked(prisma.notification.create).mock.calls.length).toBeGreaterThanOrEqual(2),
+    );
+    const sent = vi
+      .mocked(prisma.notification.create)
+      .mock.calls.map((c) => (c[0] as { data: Record<string, unknown> }).data);
+    expect(sent.map((d) => d.userId).sort()).toEqual([borrower.id, lender.id].sort());
+    expect(sent[0]).toMatchObject({
+      notificationType: "LR-05",
+      title: "Funds sent — obligation active",
+      body: "Lender sent 1,000 ETB. The obligation is now active.",
+      referenceType: "Obligation",
+      referenceId: "obl-1",
+    });
   });
 
   it("accepts Chapa's payout.success event shape", async () => {
@@ -231,19 +271,27 @@ describe("POST /webhooks/chapa/transfer", () => {
 describe("POST /webhooks/chapa/transfer — repayments", () => {
   it("reduces the balance and settles a Lump Sum obligation paid in full", async () => {
     const { Prisma } = await import("../generated/prisma/client.js");
-    vi.mocked(prisma.payment.findUnique).mockResolvedValue(
-      pendingPayment({
-        paymentDirection: "Repayment",
-        amount: new Prisma.Decimal(1000),
-        obligation: {
-          id: "obl-1",
-          status: "Active",
-          repaymentType: "LumpSum",
-          principalAmount: new Prisma.Decimal(1000),
-          outstandingBalance: new Prisma.Decimal(1000),
-        },
-      }) as never,
-    );
+    const repayment = pendingPayment({
+      paymentDirection: "Repayment",
+      amount: new Prisma.Decimal(1000),
+      obligation: {
+        id: "obl-1",
+        status: "Active",
+        repaymentType: "LumpSum",
+        principalAmount: new Prisma.Decimal(1000),
+        outstandingBalance: new Prisma.Decimal(1000),
+      },
+    });
+    // The handler looks the payment up first, then the notification path
+    // re-reads it after the transaction has committed — so the second read
+    // must show the post-payment balance, which is what PAY-01/PAY-02
+    // quote.
+    vi.mocked(prisma.payment.findUnique)
+      .mockResolvedValueOnce(repayment as never)
+      .mockResolvedValue({
+        ...repayment,
+        obligation: { ...repayment.obligation, outstandingBalance: new Prisma.Decimal(0) },
+      } as never);
     const res = await request(app).post(TRANSFER).send({ reference: "pay-1", status: "success" });
     expect(res.status).toBe(200);
     const { data } = vi.mocked(prisma.obligation.update).mock.calls[0]![0] as {
@@ -251,6 +299,25 @@ describe("POST /webhooks/chapa/transfer — repayments", () => {
     };
     expect(data.outstandingBalance.toNumber()).toBe(0);
     expect(data.status).toBe("Settled");
+
+    // A repayment splits: PAY-01 to the payer, PAY-02 to the recipient,
+    // both quoting the balance AFTER the payment.
+    await vi.waitFor(() =>
+      expect(vi.mocked(prisma.notification.create).mock.calls.length).toBeGreaterThanOrEqual(2),
+    );
+    const sent = vi
+      .mocked(prisma.notification.create)
+      .mock.calls.map((c) => (c[0] as { data: Record<string, unknown> }).data);
+
+    expect(sent.find((d) => d.notificationType === "PAY-01")).toMatchObject({
+      userId: lender.id,
+      title: "Payment Sent",
+    });
+    expect(sent.find((d) => d.notificationType === "PAY-02")).toMatchObject({
+      userId: borrower.id,
+      title: "Payment Received",
+      body: "Lender made a payment of 1,000 ETB. 0 ETB remaining.",
+    });
   });
 });
 

@@ -40,7 +40,8 @@ export function useInitiateChapaPayment() {
     }: {
       obligationId: string;
       installmentId?: string;
-    }) => initiateChapaPayment(obligationId, installmentId ? { installment_id: installmentId } : {}),
+    }) =>
+      initiateChapaPayment(obligationId, installmentId ? { installment_id: installmentId } : {}),
     onSuccess: invalidate,
   });
 }

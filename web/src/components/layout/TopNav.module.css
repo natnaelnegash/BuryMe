@@ -93,6 +93,7 @@
 }
 
 .bell {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -102,6 +103,25 @@
   border-radius: 50%;
   background: var(--color-bg);
   font-size: 16px;
+  text-decoration: none;
+}
+
+/* Unread count. Not in the nav frame — the design shows only the bare bell
+ * — but the feed is otherwise unreachable without opening it to look. */
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-red);
+  color: var(--color-white);
+  font: var(--text-pill);
 }
 
 .avatar {

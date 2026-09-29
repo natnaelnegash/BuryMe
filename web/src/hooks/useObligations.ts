@@ -6,13 +6,19 @@ import {
   getObligation,
   listObligations,
   requestRepayment,
+  type ListObligationsParams,
 } from "../api/obligations.js";
 
 const OBLIGATIONS_KEY = ["obligations"] as const;
 
-export function useObligationsQuery(params?: { role?: "borrower" | "lender"; limit?: number }) {
+export function useObligationsQuery(params?: ListObligationsParams) {
   return useQuery({
-    queryKey: [...OBLIGATIONS_KEY, params?.role ?? "all", params?.limit ?? "default"],
+    queryKey: [
+      ...OBLIGATIONS_KEY,
+      params?.role ?? "all",
+      params?.origin ?? "any",
+      params?.limit ?? "default",
+    ],
     queryFn: () => listObligations(params),
   });
 }

@@ -7,6 +7,8 @@ import { usersRouter } from "./routes/users.js";
 import { requestsRouter } from "./routes/requests.js";
 import { obligationsRouter } from "./routes/obligations.js";
 import { groupExpensesRouter } from "./routes/groupExpenses.js";
+import { notificationsRouter } from "./routes/notifications.js";
+import { settlementsRouter } from "./routes/settlements.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 
@@ -34,6 +36,8 @@ app.use("/api/v1/requests", requestsRouter);
 app.use("/api/v1/obligations", obligationsRouter);
 app.use("/api/v1/payments", paymentsRouter);
 app.use("/api/v1/group-expenses", groupExpensesRouter);
+app.use("/api/v1/settlements", settlementsRouter);
+app.use("/api/v1/notifications", notificationsRouter);
 
 // Must be mounted last — Express only calls a 4-arg middleware as an error
 // handler when it comes after every route.

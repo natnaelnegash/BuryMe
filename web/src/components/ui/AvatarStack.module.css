@@ -1,0 +1,17 @@
+/* Figma: "Avatar Stack" (221:4523) inside the Group variants of the
+ * Obligation Card. Horizontal, hugging, with a −16px item spacing so two
+ * 44px avatars measure 72px. Every circle after the first carries a 2px
+ * inside stroke in white, which is what reads as the separating ring. */
+
+.stack {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+/* CSS gap can't go negative, so the overlap is a negative margin on each
+ * avatar after the first — same result as Figma's itemSpacing: -16. */
+.stack > * + * {
+  margin-left: -16px;
+  box-shadow: inset 0 0 0 2px var(--color-white);
+}

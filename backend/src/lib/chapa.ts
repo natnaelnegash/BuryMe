@@ -99,7 +99,6 @@ export class HttpChapaClient implements ChapaClient {
   async initiateTransfer(input: TransferInput): Promise<{ transferId: string }> {
     let response: Response;
     try {
-      
       response = await this.fetchImpl("https://api.chapa.co/v1/transfers", {
         method: "POST",
         headers: {
@@ -114,9 +113,8 @@ export class HttpChapaClient implements ChapaClient {
           reference: input.reference,
           bank_code: TELEBIRR_BANK_CODE,
         }),
-        
-      })
-    } catch(err) {
+      });
+    } catch {
       throw new ChapaGatewayError("Chapa unreachable");
     }
     // Response bodies are never logged — they can carry account details.

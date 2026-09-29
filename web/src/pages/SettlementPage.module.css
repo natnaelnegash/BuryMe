@@ -1,0 +1,75 @@
+/* Figma: Screen — Bilateral Settlement (27:525) and · Respond (49:3034).
+ * One card, 680 column. CenteredLayout supplies the back control, head and
+ * card shell; these are the card's own contents. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* "R Head" (27:561): avatar + name column + trailing pill. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.headCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  font: var(--text-name-l);
+  color: var(--color-text-dark);
+}
+
+.sub {
+  font: var(--text-label);
+  color: var(--color-text-gray);
+}
+
+/* "Sum" (27:570) — Summary Rows supply their own 12px rhythm. */
+.sum {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The final row (27:580): no divider, a heavier label and a display value. */
+.netRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.netLabel {
+  font: var(--text-name-s);
+  color: var(--color-text-dark);
+}
+
+.netValue {
+  font: var(--text-amount-l);
+  color: var(--color-teal);
+  text-align: right;
+}
+
+.btnRow {
+  display: flex;
+  gap: 12px;
+}
+
+.error {
+  font: var(--text-micro);
+  color: var(--color-red);
+}
+
+.muted {
+  font: var(--text-body);
+  color: var(--color-text-gray);
+}

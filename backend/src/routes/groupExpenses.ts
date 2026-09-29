@@ -3,13 +3,11 @@ import { Router } from "express";
 
 import { prisma } from "../db/client.js";
 import { assertValidGroupExpense } from "../lib/groupExpense.js";
+import { etb, notify } from "../lib/notifications.js";
 import { createGroupExpenseInputSchema, parseBody } from "../lib/validation.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
-import {
-  toGroupExpenseResponse,
-  WITH_EXPENSE_PARTIES,
-} from "../serializers/groupExpense.js";
+import { toGroupExpenseResponse, WITH_EXPENSE_PARTIES } from "../serializers/groupExpense.js";
 
 // Group expenses (§6.2.3, §8.12, §8.13): one payer records a shared bill and
 // the platform spawns one bilateral Obligation per participant — payer as
@@ -73,7 +71,21 @@ groupExpensesRouter.post("/", async (req, res, next) => {
       });
     });
 
-    res.status(201).json(toGroupExpenseResponse(expense));
+    // GE-01 to each participant — never to the payer, who has no obligation
+    // of their own (§8.12).
+    for (const entry of expense.participants) {
+      void notify({
+        userId: entry.participantId,
+        type: "GE-01",
+        params: {
+          name: expense.payer.displayName,
+          amount: etb(entry.assignedAmount),
+        },
+        referenceId: entry.obligation?.id ?? null,
+      });
+    }
+
+    res.status(201).json(toGroupExpenseResponse(expense, uid));
   } catch (err) {
     next(err);
   }
@@ -104,7 +116,7 @@ groupExpensesRouter.get("/", async (req, res, next) => {
     const hasMore = expenses.length > take;
     const page = hasMore ? expenses.slice(0, take) : expenses;
     res.status(200).json({
-      data: page.map(toGroupExpenseResponse),
+      data: page.map((e) => toGroupExpenseResponse(e, uid)),
       next_cursor: hasMore ? page[page.length - 1]!.id : null,
     } satisfies { data: Schemas["GroupExpense"][]; next_cursor: string | null });
   } catch (err) {
@@ -127,7 +139,7 @@ groupExpensesRouter.get("/:groupExpenseId", async (req, res, next) => {
     if (!expense) {
       throw new ApiError("NOT_FOUND", "No group expense exists with that id.", 404);
     }
-    res.status(200).json(toGroupExpenseResponse(expense));
+    res.status(200).json(toGroupExpenseResponse(expense, uid));
   } catch (err) {
     next(err);
   }

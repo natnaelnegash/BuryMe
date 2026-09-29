@@ -3,6 +3,7 @@ import { Router, raw, type Request, type RequestHandler, type Response } from "e
 import { getChapaClient } from "../config/chapa.js";
 import { prisma } from "../db/client.js";
 import { startTransferForPayment } from "../lib/chapaPayments.js";
+import { notifyChapaConfirmed } from "../lib/notifications.js";
 import { confirmedPaymentEffects } from "../lib/payments.js";
 import { ApiError } from "../middleware/errors.js";
 
@@ -127,6 +128,7 @@ async function handleTransfer(event: ChapaEvent | null, res: Response): Promise<
         }),
         ...(await confirmedPaymentEffects(payment, payment.obligation)),
       ]);
+      await notifyChapaConfirmed(payment.id);
     } else {
       // The money is sitting in BuryMe's balance but couldn't be paid out.
       // Mark Failed so the lender can retry; refunding the collected amount
@@ -138,7 +140,9 @@ async function handleTransfer(event: ChapaEvent | null, res: Response): Promise<
   }
 }
 
-function route(handler: (event: ChapaEvent | null, res: Response) => Promise<void>): RequestHandler {
+function route(
+  handler: (event: ChapaEvent | null, res: Response) => Promise<void>,
+): RequestHandler {
   return async (req, res, next) => {
     try {
       await handler(readEvent(req), res);

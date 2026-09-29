@@ -10,6 +10,8 @@ import { GroupExpenseFlowPage } from "./pages/GroupExpenseFlowPage.js";
 import { MakePaymentPage } from "./pages/MakePaymentPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { NewRequestPage } from "./pages/NewRequestPage.js";
+import { NotificationPreferencesPage } from "./pages/NotificationPreferencesPage.js";
+import { NotificationsPage } from "./pages/NotificationsPage.js";
 import { ObligationDetailPage } from "./pages/ObligationDetailPage.js";
 import { ObligationsPage } from "./pages/ObligationsPage.js";
 import { ProfileEditPage } from "./pages/ProfileEditPage.js";
@@ -19,6 +21,7 @@ import { RegisterPage } from "./pages/RegisterPage.js";
 import { RequestDetailPage } from "./pages/RequestDetailPage.js";
 import { RequestFlowPage } from "./pages/RequestFlowPage.js";
 import { RequestsPage } from "./pages/RequestsPage.js";
+import { SettlementProposePage, SettlementRespondPage } from "./pages/SettlementPage.js";
 import { SearchPage } from "./pages/SearchPage.js";
 import { TelebirrPage } from "./pages/TelebirrPage.js";
 import { TelebirrVerifyPage } from "./pages/TelebirrVerifyPage.js";
@@ -164,6 +167,38 @@ export default function App() {
         element={
           <RequireAuth>
             <GroupExpenseFlowPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <RequireAuth>
+            <NotificationsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/notifications/preferences"
+        element={
+          <RequireAuth>
+            <NotificationPreferencesPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settlements/new/:counterpartyId"
+        element={
+          <RequireAuth>
+            <SettlementProposePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settlements/:id"
+        element={
+          <RequireAuth>
+            <SettlementRespondPage />
           </RequireAuth>
         }
       />

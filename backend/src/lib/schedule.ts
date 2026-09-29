@@ -85,8 +85,7 @@ async function backfillTermsFor(
     : null;
   const counter = request?.counterProposal as { proposed_schedule?: unknown } | null;
   const schedule = (counter?.proposed_schedule ?? request?.proposedSchedule) as
-    | ProposedTerms["schedule"]
-    | undefined;
+    ProposedTerms["schedule"] | undefined;
   if (!schedule?.installments?.length) {
     throw new ApiError(
       "STATUS_CONFLICT",

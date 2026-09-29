@@ -6,8 +6,29 @@ vi.mock("../config/firebase.js", () => ({
 }));
 vi.mock("../db/client.js", () => ({
   prisma: {
-    user: { findMany: vi.fn() },
-    groupExpense: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn() },
+    user: { findMany: vi.fn(), findUnique: vi.fn() },
+    // Notifications are raised as a side effect of most of these routes.
+    // Mocked with a resolved row so the emit path runs to completion
+    // instead of failing silently inside notify()'s catch.
+    notification: {
+      create: vi.fn().mockResolvedValue({
+        id: "ntf-1",
+        notificationType: "",
+        title: "",
+        body: "",
+        isRead: false,
+        createdAt: new Date("2026-09-28T00:00:00.000Z"),
+        referenceId: null,
+        referenceType: null,
+      }),
+      update: vi.fn(),
+    },
+    groupExpense: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+    },
     obligation: { create: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -16,6 +37,7 @@ vi.mock("../db/client.js", () => ({
 const { app } = await import("../app.js");
 const { auth } = await import("../config/firebase.js");
 const { prisma } = await import("../db/client.js");
+const { Prisma } = await import("../generated/prisma/client.js");
 
 const PAYER_AUTH = { Authorization: "Bearer payer-token" };
 const OUTSIDER_AUTH = { Authorization: "Bearer outsider-token" };
@@ -64,14 +86,14 @@ function storedExpense(overrides: Record<string, unknown> = {}) {
         assignedAmount: { toNumber: () => 700 },
         participantId: helen.id,
         participant: helen,
-        obligation: { id: "obl-h" },
+        obligation: { id: "obl-h", outstandingBalance: new Prisma.Decimal(700) },
       },
       {
         id: "gep-2",
         assignedAmount: { toNumber: () => 700 },
         participantId: yonas.id,
         participant: yonas,
-        obligation: { id: "obl-y" },
+        obligation: { id: "obl-y", outstandingBalance: new Prisma.Decimal(250) },
       },
     ],
     ...overrides,
@@ -209,6 +231,26 @@ describe("POST /group-expenses", () => {
       .mocked(prisma.obligation.create)
       .mock.calls.map((c) => (c[0] as { data: { borrowerId: string } }).data.borrowerId);
     expect(borrowers).not.toContain(payer.id);
+
+    // GE-01 to each participant and nobody else — the payer has no
+    // obligation of their own, so they get no notification either.
+    await vi.waitFor(() =>
+      expect(vi.mocked(prisma.notification.create).mock.calls.length).toBeGreaterThanOrEqual(2),
+    );
+    const sent = vi
+      .mocked(prisma.notification.create)
+      .mock.calls.map((c) => (c[0] as { data: Record<string, unknown> }).data);
+
+    expect(sent).toHaveLength(2);
+    expect(sent.map((d) => d.userId)).toEqual([helen.id, yonas.id]);
+    expect(sent.map((d) => d.userId)).not.toContain(payer.id);
+    expect(sent[0]).toMatchObject({
+      notificationType: "GE-01",
+      title: "New Shared Expense",
+      body: "Payer recorded a shared expense. You owe 700 ETB. Tap to review.",
+      referenceType: "Obligation",
+      referenceId: "obl-h",
+    });
   });
 });
 
@@ -222,6 +264,31 @@ describe("GET /group-expenses", () => {
     expect(prisma.groupExpense.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { payerId: payer.id } }),
     );
+  });
+});
+
+describe("outstanding_total", () => {
+  // The payer is owed every participant's remaining share; their own share
+  // is never an obligation, so it never appears here.
+  it("sums every participant's remaining share for the payer", async () => {
+    vi.mocked(prisma.groupExpense.findFirst).mockResolvedValue(storedExpense() as never);
+    const res = await request(app).get("/api/v1/group-expenses/exp-1").set(PAYER_AUTH);
+    expect(res.status).toBe(200);
+    expect(res.body.outstanding_total).toEqual({ amount: 950, currency: "ETB" });
+  });
+
+  // A participant sees only what they still owe, not the whole bill.
+  it("reports only their own remaining share for a participant", async () => {
+    vi.mocked(auth.verifyIdToken).mockResolvedValue({
+      uid: yonas.id,
+      phone_number: yonas.identifier,
+    } as never);
+    vi.mocked(prisma.groupExpense.findFirst).mockResolvedValue(storedExpense() as never);
+    const res = await request(app)
+      .get("/api/v1/group-expenses/exp-1")
+      .set({ Authorization: "Bearer yonas-token" });
+    expect(res.status).toBe(200);
+    expect(res.body.outstanding_total).toEqual({ amount: 250, currency: "ETB" });
   });
 });
 

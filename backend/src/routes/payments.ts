@@ -3,6 +3,7 @@ import { Router } from "express";
 import { prisma } from "../db/client.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
+import { etb, notify, notifySettledIfCleared } from "../lib/notifications.js";
 import { confirmedPaymentEffects, WITH_PAYMENT_PARTIES } from "../lib/payments.js";
 import { toPaymentResponse } from "../serializers/payment.js";
 
@@ -53,6 +54,20 @@ paymentsRouter.post("/:paymentId/acknowledge", async (req, res, next) => {
       }),
       ...(await confirmedPaymentEffects(payment, payment.obligation)),
     ]);
+
+    // PAY-04 back to whoever recorded it, then PAY-07 to both parties if
+    // that payment was the one that cleared the balance.
+    const acknowledger = payment.payerId === req.auth!.uid ? payment.payer : payment.recipient;
+    if (payment.recordedByUserId) {
+      void notify({
+        userId: payment.recordedByUserId,
+        type: "PAY-04",
+        params: { name: acknowledger.displayName, amount: etb(payment.amount) },
+        referenceId: payment.obligationId,
+      });
+    }
+    await notifySettledIfCleared(payment.obligationId);
+
     res.status(200).json(toPaymentResponse(confirmed));
   } catch (err) {
     next(err);
@@ -77,6 +92,17 @@ paymentsRouter.post("/:paymentId/dispute", async (req, res, next) => {
         data: { status: "Disputed" },
       }),
     ]);
+
+    const disputer = payment.payerId === req.auth!.uid ? payment.payer : payment.recipient;
+    if (payment.recordedByUserId) {
+      void notify({
+        userId: payment.recordedByUserId,
+        type: "PAY-05",
+        params: { name: disputer.displayName, amount: etb(payment.amount) },
+        referenceId: payment.id,
+      });
+    }
+
     res.status(200).json(toPaymentResponse(disputed));
   } catch (err) {
     next(err);

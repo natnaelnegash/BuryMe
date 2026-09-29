@@ -4,6 +4,7 @@ import { Router } from "express";
 import { prisma } from "../db/client.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
+import { notify } from "../lib/notifications.js";
 import { confirmChallenge, issueChallenge } from "../lib/telebirrOtp.js";
 import {
   confirmTelebirrOtpRequestSchema,
@@ -134,6 +135,17 @@ usersRouter.post("/me/telebirr/verify", async (req, res, next) => {
     const body = parseBody(confirmTelebirrOtpRequestSchema, req.body);
     const account = await findOwnTelebirrAccount(req.auth!.uid);
     const verified = await confirmChallenge(account, body.code);
+
+    // TB-02. The catalog navigates to whatever prompted the verification;
+    // with no way to know which that was, the account itself is the
+    // reference and the client lands on the Telebirr screen.
+    void notify({
+      userId: req.auth!.uid,
+      type: "TB-02",
+      params: {},
+      referenceId: verified.accountId,
+    });
+
     res.status(200).json(toTelebirrAccountResponse(verified));
   } catch (err) {
     next(err);

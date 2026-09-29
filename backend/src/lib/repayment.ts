@@ -1,6 +1,7 @@
 import { prisma } from "../db/client.js";
 import type { Installment, Obligation } from "../generated/prisma/client.js";
 import { ApiError } from "../middleware/errors.js";
+import { etb, notify } from "./notifications.js";
 import { loadSchedule } from "./schedule.js";
 
 // Shared by POST /requests (request_type: Repayment) and the
@@ -66,13 +67,13 @@ export async function assertObligationRepayable(
   return { installment: null };
 }
 
-export function createRepaymentRequest(
+export async function createRepaymentRequest(
   obligation: Obligation,
   uid: string,
   target: RepaymentTarget,
   note: string | null | undefined,
 ) {
-  return prisma.request.create({
+  const request = await prisma.request.create({
     data: {
       requestType: "Repayment",
       initiatingUserId: uid,
@@ -85,4 +86,16 @@ export function createRepaymentRequest(
     },
     include: { initiatingUser: true, receivingUser: true },
   });
+
+  // RR-01 to the borrower. Raised here rather than at either call site so
+  // both entry points behave identically. The catalog opens the obligation,
+  // not the request.
+  void notify({
+    userId: request.receivingUserId,
+    type: "RR-01",
+    params: { name: request.initiatingUser.displayName, amount: etb(request.amount) },
+    referenceId: obligation.id,
+  });
+
+  return request;
 }

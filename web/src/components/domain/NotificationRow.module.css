@@ -1,0 +1,58 @@
+/* Figma: Screen — Notification Feed (37:1443). The frame reuses the
+ * "Request Row" component set, so the shell is identical — 76px tall,
+ * radius 14, 16/18 padding, gap 14, subtle elevation. The avatar, status
+ * pill and per-row action from that component are left out: a Notification
+ * carries no actor and no domain status, so there is nothing to put in
+ * them (see NotificationsPage for the note on that deviation). */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: none;
+  border-radius: var(--radius-list);
+  background: var(--color-white);
+  box-shadow: var(--elevation-subtle);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.row:hover {
+  box-shadow: var(--elevation-card);
+}
+
+/* Unread rows carry a teal rail, the one affordance the feed's own data
+ * supports — the frame's status pill needs state a notification hasn't got. */
+.unread {
+  border-left: 3px solid var(--color-teal);
+}
+
+.textCol {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  font: var(--text-name);
+  color: var(--color-text-dark);
+}
+
+.body {
+  font: var(--text-caption);
+  color: var(--color-text-gray);
+}
+
+/* "Right Col" (46:2074) — hugging, right-aligned. */
+.time {
+  flex: none;
+  font: var(--text-amount-s);
+  color: var(--color-teal);
+  white-space: nowrap;
+}

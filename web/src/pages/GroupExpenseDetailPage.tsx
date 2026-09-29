@@ -79,11 +79,7 @@ export function GroupExpenseDetailPage() {
       <div className={styles.grid}>
         {expense.participants.map((p) => {
           const isViewer = p.participant.user_id === uid;
-          const direction: ObligationDirection = viewerIsPayer
-            ? "owed"
-            : isViewer
-              ? "owe"
-              : "self";
+          const direction: ObligationDirection = viewerIsPayer ? "owed" : isViewer ? "owe" : "self";
           const status = statusById.get(p.obligation_id);
 
           return (

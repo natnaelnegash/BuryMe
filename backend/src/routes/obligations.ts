@@ -18,6 +18,7 @@ import {
   systemAmount,
   WITH_PAYMENT_PARTIES,
 } from "../lib/payments.js";
+import { etb, notify } from "../lib/notifications.js";
 import { assertObligationRepayable, createRepaymentRequest } from "../lib/repayment.js";
 import { loadSchedule } from "../lib/schedule.js";
 import { toObligationResponse } from "../serializers/obligation.js";
@@ -53,13 +54,18 @@ async function findObligationForUser(obligationId: string, uid: string) {
 obligationsRouter.get("/", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
-    const { role, status, limit, cursor } = req.query as Record<string, string | undefined>;
+    const { role, status, origin, limit, cursor } = req.query as Record<string, string | undefined>;
 
     const where: Record<string, unknown> = {};
     if (role === "borrower") where.borrowerId = uid;
     else if (role === "lender") where.lenderId = uid;
     else where.OR = [{ borrowerId: uid }, { lenderId: uid }];
     if (status) where.status = { in: status.split(",") };
+    // Group-expense obligations are surfaced through their expense, so the
+    // personal list excludes them rather than repeating each share as its
+    // own row.
+    if (origin === "personal") where.originatingExpenseId = null;
+    else if (origin === "group") where.originatingExpenseId = { not: null };
 
     const take = Math.min(Math.max(Number(limit) || 20, 1), 100);
     const obligations = await prisma.obligation.findMany({
@@ -220,6 +226,21 @@ obligationsRouter.post("/:obligationId/payments/external", async (req, res, next
       },
       include: WITH_PAYMENT_PARTIES,
     });
+
+    // PAY-03 to the party who now has to confirm or dispute it.
+    const otherPartyId = payment.payerId === uid ? payment.recipientId : payment.payerId;
+    const recorder = payment.payerId === uid ? payment.payer : payment.recipient;
+    void notify({
+      userId: otherPartyId,
+      type: "PAY-03",
+      params: {
+        name: recorder.displayName,
+        amount: etb(payment.amount),
+        direction: payment.paymentDirection === "Disbursement" ? "Disbursement" : "Repayment",
+      },
+      referenceId: payment.id,
+    });
+
     res.status(201).json(toPaymentResponse(payment));
   } catch (err) {
     next(err);
