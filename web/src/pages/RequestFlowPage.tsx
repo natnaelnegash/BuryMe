@@ -9,6 +9,7 @@ import { Button } from "../components/ui/Button.js";
 import { Field } from "../components/ui/Field.js";
 import { Note } from "../components/ui/Note.js";
 import { OptionCard } from "../components/ui/OptionCard.js";
+import { Spinner } from "../components/ui/Spinner.js";
 import { SummaryRow } from "../components/ui/SummaryRow.js";
 import { useCreateRequest } from "../hooks/useRequests.js";
 import { useSearchUsersQuery, useUserQuery } from "../hooks/useUsers.js";
@@ -76,9 +77,8 @@ function Flow({ kind }: { kind: Kind }) {
 
   // Step 1 — recipient.
   const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
   const [recipient, setRecipient] = useState<Schemas["UserSummary"] | null>(null);
-  const { data: results, isFetching: searching } = useSearchUsersQuery(submittedQuery);
+  const { data: results, isSearching: searching, searchNow, term } = useSearchUsersQuery(query);
   const preselected = useUserQuery(params.get("to"));
   useEffect(() => {
     if (preselected.data && !recipient) setRecipient(preselected.data);
@@ -221,8 +221,9 @@ function Flow({ kind }: { kind: Kind }) {
         <form
           className={styles.stack}
           onSubmit={(e) => {
+            // Results already follow typing; Enter just skips the debounce.
             e.preventDefault();
-            setSubmittedQuery(query.trim());
+            searchNow();
           }}
         >
           <Field
@@ -248,7 +249,10 @@ function Flow({ kind }: { kind: Kind }) {
               onSelect={() => setRecipient(user)}
             />
           ))}
-          {submittedQuery.length >= 2 && !searching && (results ?? []).length === 0 && (
+          {searching && (results ?? []).length === 0 && (
+            <Spinner block label="Searching for people" />
+          )}
+          {term.length >= 2 && !searching && (results ?? []).length === 0 && (
             <p className={styles.empty}>No one matched that search.</p>
           )}
           {stepError && (

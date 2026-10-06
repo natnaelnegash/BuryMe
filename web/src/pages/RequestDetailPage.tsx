@@ -3,12 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
 import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { CenteredLayout } from "../components/layout/CenteredLayout.js";
 import { Avatar } from "../components/ui/Avatar.js";
 import { Button } from "../components/ui/Button.js";
 import { Field } from "../components/ui/Field.js";
 import { Note } from "../components/ui/Note.js";
 import { OptionCard } from "../components/ui/OptionCard.js";
+import { Spinner } from "../components/ui/Spinner.js";
 import { StatusPill } from "../components/ui/StatusPill.js";
 import { SummaryRow } from "../components/ui/SummaryRow.js";
 import { useAuth } from "../hooks/useAuth.js";
@@ -59,17 +61,15 @@ export function RequestDetailPage() {
 
   if (isLoading) {
     return (
-      <CenteredLayout title="Request" subtitle="Loading…" width={680} back>
-        <p className={styles.muted}>Loading…</p>
+      <CenteredLayout title="Request" subtitle="Fetching this request." width={680} back>
+        <Spinner block label="Loading request" />
       </CenteredLayout>
     );
   }
   if (error || !request) {
     return (
       <CenteredLayout title="Request" subtitle="This request couldn’t be loaded." width={680} back>
-        <p role="alert" className={styles.error}>
-          {errorMessage(error) ?? "Not found."}
-        </p>
+        <ErrorState error={error} inset />
       </CenteredLayout>
     );
   }

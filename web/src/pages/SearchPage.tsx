@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { PersonRow } from "../components/domain/PersonRow.js";
 import { CenteredLayout } from "../components/layout/CenteredLayout.js";
 import { Button } from "../components/ui/Button.js";
 import { Field } from "../components/ui/Field.js";
 import { Note } from "../components/ui/Note.js";
+import { Spinner } from "../components/ui/Spinner.js";
+import { StateCard } from "../components/ui/StateCard.js";
 import { useSearchUsersQuery } from "../hooks/useUsers.js";
 import styles from "./SearchPage.module.css";
 
@@ -14,15 +16,16 @@ import styles from "./SearchPage.module.css";
 export function SearchPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
-  const { data, isFetching, error } = useSearchUsersQuery(submittedQuery);
+  // Results follow typing (debounced in the hook). The form and its button
+  // remain so Enter still works and so an impatient search skips the wait.
+  const { data, isSearching, searchNow, term, error } = useSearchUsersQuery(query);
 
   const results = data ?? [];
-  const searched = submittedQuery.length >= 2;
+  const searched = term.length >= 2;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setSubmittedQuery(query.trim());
+    searchNow();
   }
 
   return (
@@ -43,40 +46,60 @@ export function SearchPage() {
             maxLength={100}
             required
           />
-          <Button type="submit" disabled={isFetching}>
-            {isFetching ? "Searching…" : "Search"}
+          <Button type="submit" disabled={query.trim().length < 2}>
+            Search
           </Button>
         </div>
 
-        {error && (
-          <p role="alert" className={styles.error}>
-            {error instanceof ApiError ? error.message : "Something went wrong."}
-          </p>
-        )}
+        {error && <ErrorState error={error} onRetry={searchNow} inset />}
 
-        {searched && !isFetching && results.length === 0 && (
-          <p className={styles.empty}>No one matched that search.</p>
+        {/* While refining a term the previous results stay up, so the spinner
+            sits beside them rather than replacing them. */}
+        {isSearching && results.length === 0 && <Spinner block label="Searching for people" />}
+
+        {searched && !error && !isSearching && results.length === 0 && (
+          <StateCard
+            inset
+            glyph="?"
+            accent="gray"
+            title="No one found"
+            body="Only registered users appear here. Try a different name or number."
+            action={
+              <Button kind="secondary" size="small" onClick={() => setQuery("")}>
+                Clear search
+              </Button>
+            }
+          />
         )}
 
         {results.length > 0 && (
-          <div className={styles.results}>
-            {results.map((user) => (
-              <PersonRow
-                key={user.user_id}
-                name={user.display_name}
-                action={
-                  <Button
-                    type="button"
-                    kind="secondary"
-                    size="small"
-                    onClick={() => navigate(`/requests/new?to=${encodeURIComponent(user.user_id)}`)}
-                  >
-                    Request
-                  </Button>
-                }
-              />
-            ))}
-          </div>
+          <>
+            {isSearching && (
+              <p className={styles.searching}>
+                <Spinner size={14} label="Searching for people" /> Searching…
+              </p>
+            )}
+            <div className={styles.results}>
+              {results.map((user) => (
+                <PersonRow
+                  key={user.user_id}
+                  name={user.display_name}
+                  action={
+                    <Button
+                      type="button"
+                      kind="secondary"
+                      size="small"
+                      onClick={() =>
+                        navigate(`/requests/new?to=${encodeURIComponent(user.user_id)}`)
+                      }
+                    >
+                      Request
+                    </Button>
+                  }
+                />
+              ))}
+            </div>
+          </>
         )}
 
         <Note color="gray">Only registered BuryMe users appear in search results.</Note>

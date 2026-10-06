@@ -6,6 +6,7 @@ import { ApiError } from "../api/client.js";
 import { CenteredLayout } from "../components/layout/CenteredLayout.js";
 import { Button } from "../components/ui/Button.js";
 import { Note } from "../components/ui/Note.js";
+import { Spinner } from "../components/ui/Spinner.js";
 import { Toggle } from "../components/ui/Toggle.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useUpdateNotificationPreferences } from "../hooks/useNotifications.js";
@@ -77,7 +78,7 @@ export function NotificationPreferencesPage() {
         width={680}
         back={() => navigate("/profile")}
       >
-        <p className={styles.desc}>Loading…</p>
+        <Spinner block label="Loading preferences" />
       </CenteredLayout>
     );
   }

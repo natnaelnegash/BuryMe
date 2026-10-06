@@ -2,10 +2,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
 import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { CenteredLayout } from "../components/layout/CenteredLayout.js";
 import { Avatar } from "../components/ui/Avatar.js";
 import { Button } from "../components/ui/Button.js";
 import { Note } from "../components/ui/Note.js";
+import { Spinner } from "../components/ui/Spinner.js";
 import { StatusPill } from "../components/ui/StatusPill.js";
 import { SummaryRow } from "../components/ui/SummaryRow.js";
 import { useAuth } from "../hooks/useAuth.js";
@@ -110,7 +112,7 @@ export function SettlementProposePage() {
   );
   const counterparty = theyOwe?.borrower ?? youOwe?.lender;
 
-  if (isLoading) return <p className={styles.muted}>Loading…</p>;
+  if (isLoading) return <Spinner block label="Loading obligations" />;
 
   if (!theyOwe || !youOwe || !counterparty) {
     return (
@@ -181,7 +183,7 @@ export function SettlementRespondPage() {
   const decline = useDeclineSettlement();
   const { data: obligations } = useObligationsQuery({ limit: 100 });
 
-  if (isLoading) return <p className={styles.muted}>Loading…</p>;
+  if (isLoading) return <Spinner block label="Loading settlement suggestion" />;
   if (error || !suggestion) {
     return (
       <CenteredLayout
@@ -190,9 +192,7 @@ export function SettlementRespondPage() {
         width={680}
         back
       >
-        <p role="alert" className={styles.error}>
-          {errorMessage(error) ?? "No settlement suggestion exists with that id."}
-        </p>
+        <ErrorState error={error} inset />
       </CenteredLayout>
     );
   }

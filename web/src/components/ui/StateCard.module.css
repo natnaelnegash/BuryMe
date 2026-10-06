@@ -1,0 +1,35 @@
+/* Figma: the shared block of 39:1817 / 66:1037 — radius 18, padding 28,
+ * gap 10, vertical, cross-axis CENTER, white, elevation-card.
+ *
+ * The frames draw it at a fixed 592 because they tile two per row; in the
+ * app it fills whatever column it is dropped into. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px;
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: var(--elevation-card);
+  text-align: center;
+}
+
+/* Nested inside another card, the surrounding card supplies the chrome. */
+.card.inset {
+  padding: 12px 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.title {
+  font: var(--text-card-section);
+  color: var(--color-text-dark);
+}
+
+.body {
+  font: var(--text-label);
+  color: var(--color-text-gray);
+}

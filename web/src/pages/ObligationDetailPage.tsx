@@ -2,11 +2,13 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
 import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { InstallmentRow } from "../components/domain/InstallmentRow.js";
 import { TimelineItem, type TimelineColor } from "../components/domain/TimelineItem.js";
 import { Avatar } from "../components/ui/Avatar.js";
 import { Button } from "../components/ui/Button.js";
 import { Note } from "../components/ui/Note.js";
+import { Spinner } from "../components/ui/Spinner.js";
 import { StatusPill, type PillStatus } from "../components/ui/StatusPill.js";
 import { SummaryRow } from "../components/ui/SummaryRow.js";
 import { useAuth } from "../hooks/useAuth.js";
@@ -77,16 +79,14 @@ export function ObligationDetailPage() {
   const acknowledge = useAcknowledgePayment();
   const dispute = useDisputePayment();
 
-  if (isLoading) return <p className={styles.muted}>Loading…</p>;
+  if (isLoading) return <Spinner block label="Loading obligation" />;
   if (error || !o) {
     return (
       <div className={styles.page}>
         <Link to="/obligations" className={styles.back}>
           ← &nbsp;Back to Obligations
         </Link>
-        <p role="alert" className={styles.error}>
-          {errorMessage(error) ?? "This obligation couldn’t be loaded."}
-        </p>
+        <ErrorState error={error} />
       </div>
     );
   }

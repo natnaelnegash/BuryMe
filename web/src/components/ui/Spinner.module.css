@@ -1,0 +1,39 @@
+/* A ring with one side knocked out, rotating — the three coloured sides
+ * read as a 270° arc. Border colour is `currentColor` so the spinner takes
+ * the colour of whatever it sits in. */
+
+.ring {
+  display: block;
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: currentcolor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Slowed rather than stopped: a still ring would read as a broken graphic,
+ * and the feedback is the whole point of showing it. */
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    animation-duration: 2.4s;
+  }
+}
+
+.block {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+  color: var(--color-teal);
+}
+
+.inline {
+  display: inline-flex;
+  vertical-align: -0.15em;
+}

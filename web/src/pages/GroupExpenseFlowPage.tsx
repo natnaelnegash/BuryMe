@@ -9,6 +9,7 @@ import { Button } from "../components/ui/Button.js";
 import { Checkbox } from "../components/ui/Checkbox.js";
 import { Field } from "../components/ui/Field.js";
 import { Note } from "../components/ui/Note.js";
+import { Spinner } from "../components/ui/Spinner.js";
 import { SummaryRow } from "../components/ui/SummaryRow.js";
 import { Toggle } from "../components/ui/Toggle.js";
 import { useAuth } from "../hooks/useAuth.js";
@@ -39,8 +40,7 @@ export function GroupExpenseFlowPage() {
 
   // Step 1 — participants.
   const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
-  const { data: results, isFetching } = useSearchUsersQuery(submittedQuery);
+  const { data: results, isSearching, searchNow, term } = useSearchUsersQuery(query);
   const [selected, setSelected] = useState<Participant[]>([]);
   const [includeMe, setIncludeMe] = useState(true);
 
@@ -151,8 +151,9 @@ export function GroupExpenseFlowPage() {
         <form
           className={styles.stack}
           onSubmit={(e) => {
+            // Results already follow typing; Enter just skips the debounce.
             e.preventDefault();
-            setSubmittedQuery(query.trim());
+            searchNow();
           }}
         >
           <Field
@@ -194,7 +195,8 @@ export function GroupExpenseFlowPage() {
                 action={<Checkbox checked={false} />}
               />
             ))}
-          {submittedQuery.length >= 2 && !isFetching && candidates.length === 0 && (
+          {isSearching && candidates.length === 0 && <Spinner block label="Searching for people" />}
+          {term.length >= 2 && !isSearching && candidates.length === 0 && (
             <p className={styles.caption}>No one matched that search.</p>
           )}
 

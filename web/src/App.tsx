@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/layout/AppShell.js";
+import { Spinner } from "./components/ui/Spinner.js";
 import { useAuth } from "./hooks/useAuth.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { DisbursementPage } from "./pages/DisbursementPage.js";
@@ -10,6 +11,7 @@ import { GroupExpenseFlowPage } from "./pages/GroupExpenseFlowPage.js";
 import { MakePaymentPage } from "./pages/MakePaymentPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { NewRequestPage } from "./pages/NewRequestPage.js";
+import { NotFoundPage } from "./pages/NotFoundPage.js";
 import { NotificationPreferencesPage } from "./pages/NotificationPreferencesPage.js";
 import { NotificationsPage } from "./pages/NotificationsPage.js";
 import { ObligationDetailPage } from "./pages/ObligationDetailPage.js";
@@ -31,7 +33,7 @@ import { TelebirrVerifyPage } from "./pages/TelebirrVerifyPage.js";
 // auth screens deliberately sit outside it — their Figma frames have no nav.
 function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuth();
-  if (status === "loading") return <p>Loading…</p>;
+  if (status === "loading") return <Spinner block label="Signing you in" />;
   if (status === "signed-out") return <Navigate to="/login" replace />;
   if (status === "needs-registration") return <Navigate to="/register" replace />;
   return <AppShell>{children}</AppShell>;
@@ -207,6 +209,16 @@ export default function App() {
         element={
           <RequireAuth>
             <GroupExpenseDetailPage />
+          </RequireAuth>
+        }
+      />
+      {/* Inside RequireAuth so an unknown URL keeps the nav rather than
+          dropping the shell. A signed-out visitor is sent to /login first. */}
+      <Route
+        path="*"
+        element={
+          <RequireAuth>
+            <NotFoundPage />
           </RequireAuth>
         }
       />

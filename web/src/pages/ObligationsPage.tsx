@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { ObligationCard, type ObligationDirection } from "../components/domain/ObligationCard.js";
 import { PageHeader } from "../components/layout/PageHeader.js";
 import { Button } from "../components/ui/Button.js";
 import { FilterChip } from "../components/ui/FilterChip.js";
+import { Spinner } from "../components/ui/Spinner.js";
+import { StateCard } from "../components/ui/StateCard.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useGroupExpensesQuery } from "../hooks/useGroupExpenses.js";
 import { useObligationsQuery, useRequestRepayment } from "../hooks/useObligations.js";
@@ -32,6 +36,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function ObligationsPage() {
+  const navigate = useNavigate();
   const { buryMeUser } = useAuth();
   const uid = buryMeUser?.user_id;
   const [tab, setTab] = useState<Tab>("all");
@@ -41,16 +46,19 @@ export function ObligationsPage() {
     data,
     isLoading: obligationsLoading,
     error: obligationsError,
+    refetch: refetchObligations,
   } = useObligationsQuery({ origin: "personal" });
   const {
     data: expensePage,
     isLoading: expensesLoading,
     error: expensesError,
+    refetch: refetchExpenses,
   } = useGroupExpensesQuery();
   const repaymentMutation = useRequestRepayment();
 
   const isLoading = isGroupTab ? expensesLoading : obligationsLoading;
   const queryError = isGroupTab ? expensesError : obligationsError;
+  const refetch = isGroupTab ? refetchExpenses : refetchObligations;
 
   const all = data?.data ?? [];
   const obligations = all.filter((o) => {
@@ -62,6 +70,11 @@ export function ObligationsPage() {
 
   const expenses = expensePage?.data ?? [];
   const isEmpty = isGroupTab ? expenses.length === 0 : obligations.length === 0;
+  // The design's empty block is for having no obligations at all, and its
+  // "Record a loan" CTA only makes sense then. A tab that merely filters down
+  // to nothing keeps the plain line — otherwise the Overdue tab would claim
+  // you have no obligations while you hold ten active ones.
+  const neverHadAny = !isGroupTab && all.length === 0;
 
   return (
     <div className={styles.page}>
@@ -75,15 +88,24 @@ export function ObligationsPage() {
         ))}
       </div>
 
-      {isLoading && <p className={styles.empty}>Loading…</p>}
-      {queryError && (
-        <p role="alert" className={styles.error}>
-          {mutationErrorMessage(queryError)}
-        </p>
-      )}
+      {isLoading && <Spinner block label="Loading obligations" />}
+      {queryError && <ErrorState error={queryError} onRetry={() => void refetch()} />}
 
-      {!isLoading && isEmpty ? (
-        <p className={styles.empty}>Nothing here yet.</p>
+      {!isLoading && !queryError && isEmpty ? (
+        neverHadAny ? (
+          <StateCard
+            glyph="+"
+            title="No obligations yet"
+            body="When you lend or borrow, it shows up here."
+            action={
+              <Button size="small" onClick={() => navigate("/requests/new/lend")}>
+                Record a loan
+              </Button>
+            }
+          />
+        ) : (
+          <p className={styles.empty}>Nothing here yet.</p>
+        )
       ) : (
         <div className={styles.grid}>
           {/* Group tab: one card per expense (221:4496), not per share. */}

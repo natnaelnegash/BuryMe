@@ -31,18 +31,6 @@
 }
 
 /* "State — Empty Notifications" (39:1841): radius 18, 28 padding, centred. */
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 28px;
-  border-radius: var(--radius-card);
-  background: var(--color-white);
-  box-shadow: var(--elevation-card);
-  font: var(--text-body);
-  color: var(--color-text-gray);
-}
 
 .headRow {
   display: flex;
@@ -51,7 +39,3 @@
   gap: 16px;
 }
 
-.error {
-  font: var(--text-micro);
-  color: var(--color-red);
-}

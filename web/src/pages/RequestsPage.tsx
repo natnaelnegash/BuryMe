@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
 import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { RequestRow } from "../components/domain/RequestRow.js";
 import { PageHeader } from "../components/layout/PageHeader.js";
 import { Button } from "../components/ui/Button.js";
 import { FilterChip } from "../components/ui/FilterChip.js";
+import { Spinner } from "../components/ui/Spinner.js";
+import { StateCard } from "../components/ui/StateCard.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useCancelRequest, useRequestsQuery } from "../hooks/useRequests.js";
 import { formatMoney, formatSignedMoney } from "../lib/money.js";
@@ -29,7 +32,7 @@ export function RequestsPage() {
   const { buryMeUser } = useAuth();
   const uid = buryMeUser?.user_id;
   const [tab, setTab] = useState<Tab>("recipient");
-  const { data, isLoading, error: queryError } = useRequestsQuery({ role: tab });
+  const { data, isLoading, error: queryError, refetch } = useRequestsQuery({ role: tab });
   const cancelMutation = useCancelRequest();
 
   const requests = data?.data ?? [];
@@ -57,19 +60,17 @@ export function RequestsPage() {
         </FilterChip>
       </div>
 
-      {isLoading && <p className={styles.empty}>Loading…</p>}
-      {queryError && (
-        <p role="alert" className={styles.error}>
-          {errorMessage(queryError)}
-        </p>
-      )}
+      {isLoading && <Spinner block label="Loading requests" />}
+      {queryError && <ErrorState error={queryError} onRetry={() => void refetch()} />}
 
-      {!isLoading && requests.length === 0 ? (
-        <p className={styles.empty}>
-          {tab === "recipient"
-            ? "No requests have come your way yet."
-            : "You have not sent any requests yet."}
-        </p>
+      {/* One empty block covers both tabs, as the design has one (39:1835). */}
+      {!isLoading && !queryError && requests.length === 0 ? (
+        <StateCard
+          glyph="✉"
+          accent="indigo"
+          title="No requests"
+          body="Borrow requests and lending records will appear here."
+        />
       ) : (
         <div className={styles.list}>
           {requests.map((r) => {

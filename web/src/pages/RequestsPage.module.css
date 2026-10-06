@@ -18,11 +18,6 @@
   gap: 12px;
 }
 
-.empty {
-  padding: 24px 0;
-  font: var(--text-body);
-  color: var(--color-text-gray);
-}
 
 .error {
   font: var(--text-micro);

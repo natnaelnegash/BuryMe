@@ -1,11 +1,13 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { CenteredLayout } from "../components/layout/CenteredLayout.js";
 import { Button } from "../components/ui/Button.js";
 import { Field } from "../components/ui/Field.js";
 import { Note } from "../components/ui/Note.js";
 import { OptionCard } from "../components/ui/OptionCard.js";
+import { Spinner } from "../components/ui/Spinner.js";
 import { SummaryRow } from "../components/ui/SummaryRow.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useDisburseObligation, useObligationQuery } from "../hooks/useObligations.js";
@@ -32,8 +34,13 @@ export function DisbursementPage() {
 
   if (isLoading) {
     return (
-      <CenteredLayout title="Send Disbursement" subtitle="Loading…" width={680} back>
-        <p className={styles.muted}>Loading…</p>
+      <CenteredLayout
+        title="Send Disbursement"
+        subtitle="Fetching this obligation."
+        width={680}
+        back
+      >
+        <Spinner block label="Loading obligation" />
       </CenteredLayout>
     );
   }
@@ -45,9 +52,7 @@ export function DisbursementPage() {
         width={680}
         back
       >
-        <p role="alert" className={styles.error}>
-          {error instanceof ApiError ? error.message : "Not found."}
-        </p>
+        <ErrorState error={error} inset />
       </CenteredLayout>
     );
   }

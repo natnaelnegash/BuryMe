@@ -187,11 +187,6 @@
   color: var(--color-text-dark);
 }
 
-.muted {
-  font: var(--text-body);
-  color: var(--color-text-gray);
-}
-
 .error {
   font: var(--text-micro);
   color: var(--color-red);

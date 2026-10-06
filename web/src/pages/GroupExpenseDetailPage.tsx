@@ -1,8 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { ObligationCard, type ObligationDirection } from "../components/domain/ObligationCard.js";
 import { PageHeader } from "../components/layout/PageHeader.js";
+import { Spinner } from "../components/ui/Spinner.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useGroupExpenseQuery } from "../hooks/useGroupExpenses.js";
 import { useObligationsQuery } from "../hooks/useObligations.js";
@@ -21,11 +22,6 @@ import styles from "./GroupExpenseDetailPage.module.css";
 // participant can open the same screen, so the payer line names whoever
 // paid and the viewer's own row reads as money they owe.
 
-function errorMessage(error: unknown): string | null {
-  if (!error) return null;
-  return error instanceof ApiError ? error.message : "Something went wrong.";
-}
-
 export function GroupExpenseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { buryMeUser } = useAuth();
@@ -42,16 +38,14 @@ export function GroupExpenseDetailPage() {
     (obligations?.data ?? []).map((o) => [o.obligation_id, o.status] as const),
   );
 
-  if (isLoading) return <p className={styles.muted}>Loading…</p>;
+  if (isLoading) return <Spinner block label="Loading expense" />;
   if (error || !expense) {
     return (
       <div className={styles.page}>
         <Link to="/obligations" className={styles.back}>
           ← &nbsp;Back to Obligations
         </Link>
-        <p role="alert" className={styles.error}>
-          {errorMessage(error) ?? "This group expense couldn’t be loaded."}
-        </p>
+        <ErrorState error={error} />
       </div>
     );
   }

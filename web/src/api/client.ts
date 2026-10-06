@@ -18,16 +18,38 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The request never reached the server — no response, so no error envelope
+ * and no `ErrorCode` to carry. Kept distinct from `ApiError` because the two
+ * mean different things to the user: offline and retryable, versus the
+ * server having refused.
+ */
+export class NetworkError extends Error {
+  constructor(cause?: unknown) {
+    super("You’re offline. Please check your connection and try again.");
+    this.name = "NetworkError";
+    this.cause = cause;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const idToken = await auth.currentUser?.getIdToken();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
-      ...init?.headers,
-    },
-  });
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch (err) {
+    // `fetch` rejects only when the request itself failed — DNS, refused
+    // connection, dropped network. An HTTP error status resolves normally.
+    throw new NetworkError(err);
+  }
 
   if (res.status === 204) {
     return undefined as T;

@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
+import { ErrorState } from "../components/domain/ErrorState.js";
 import { NotificationRow } from "../components/domain/NotificationRow.js";
 import { PageHeader } from "../components/layout/PageHeader.js";
 import { Button } from "../components/ui/Button.js";
 import { FilterChip } from "../components/ui/FilterChip.js";
+import { Spinner } from "../components/ui/Spinner.js";
+import { StateCard } from "../components/ui/StateCard.js";
 import { useMarkNotificationsRead, useNotificationsQuery } from "../hooks/useNotifications.js";
 import styles from "./NotificationsPage.module.css";
 
@@ -22,7 +24,7 @@ type Tab = "all" | "unread";
 
 export function NotificationsPage() {
   const [tab, setTab] = useState<Tab>("all");
-  const { data, isLoading, error } = useNotificationsQuery();
+  const { data, isLoading, error, refetch } = useNotificationsQuery();
   const markRead = useMarkNotificationsRead();
 
   const all = data?.data ?? [];
@@ -58,18 +60,18 @@ export function NotificationsPage() {
         </FilterChip>
       </div>
 
-      {error && (
-        <p role="alert" className={styles.error}>
-          {error instanceof ApiError ? error.message : "Something went wrong."}
-        </p>
-      )}
+      {error && <ErrorState error={error} onRetry={() => void refetch()} />}
 
       {isLoading ? (
-        <p className={styles.empty}>Loading…</p>
-      ) : notifications.length === 0 ? (
-        <p className={styles.empty}>
-          {tab === "unread" ? "Nothing unread." : "No notifications yet."}
-        </p>
+        <Spinner block label="Loading notifications" />
+      ) : error ? null : notifications.length === 0 ? (
+        /* The design's one block (39:1841) reads correctly for both tabs. */
+        <StateCard
+          glyph="🔔"
+          accent="gray"
+          title="You’re all caught up"
+          body="New activity will show up here."
+        />
       ) : (
         <div className={styles.list}>
           {notifications.map((n) => (
