@@ -461,6 +461,12 @@ model Notification {
   referenceId   String? @map("reference_id")
   referenceType String? @map("reference_type")
 
+  // Set only by the timed reminders (§13.3), which re-evaluate the same
+  // rows on every sweep. The unique index is what stops a reminder being
+  // sent twice — event-driven notifications leave it null, since they fire
+  // from a state change that happens once.
+  dedupeKey String? @unique @map("dedupe_key")
+
   // The feed is read newest-first, scoped to one user.
   @@index([userId, createdAt])
   @@map("notifications")

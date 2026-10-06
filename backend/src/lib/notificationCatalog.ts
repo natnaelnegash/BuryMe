@@ -108,6 +108,26 @@ const CATALOG: Partial<Record<NotificationType, Template>> = {
     body: `${p.name} declined the lending record for ${p.amount}.`,
   }),
 
+  // ── Repayment Scheduling reminders (6.3.2, timed per §13.3) ─────────
+  "RS-04": (p) => ({
+    title: "Upcoming Installment",
+    body: `Your installment of ${p.amount} is due on ${p.date}. Tap to pay.`,
+  }),
+  "RS-05": (p) => ({
+    title: "Installment Overdue",
+    body: `Your installment of ${p.amount} was due on ${p.date} and is now overdue.`,
+  }),
+  "RS-06": (p) => ({
+    title: "Obligation Due Soon",
+    body: `Your obligation of ${p.outstanding} to ${p.name} is due on ${p.date}.`,
+  }),
+
+  // ── Reminder Notifications (repeated, §13.3) ────────────────────────
+  "REM-01": (p) => ({
+    title: "Confirmation Pending",
+    body: `${p.name} recorded a payment of ${p.amount} ${p.days} days ago. Please confirm or dispute.`,
+  }),
+
   // ── Chapa Payments (6.4.1) ──────────────────────────────────────────
   "PAY-01": (p) => ({
     title: "Payment Sent",
@@ -176,6 +196,10 @@ const REFERENCE: Partial<Record<NotificationType, ReferenceType | null>> = {
   "LR-04": "Obligation",
   "LR-05": "Obligation",
   "LR-06": null,
+  "RS-04": "Obligation",
+  "RS-05": "Obligation",
+  "RS-06": "Obligation",
+  "REM-01": "Payment",
   "PAY-01": "Obligation",
   "PAY-02": "Obligation",
   "PAY-03": "Payment",

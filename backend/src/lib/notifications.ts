@@ -39,6 +39,12 @@ export interface NotifyInput {
   params: CatalogParams;
   /** The entity to open; the catalog decides its type. */
   referenceId?: string | null;
+  /**
+   * Timed reminders only (§13.3). The sweep re-evaluates the same rows every
+   * run, so each reminder names the occasion it is for ("RS-04:<id>:3") and
+   * the unique index makes a second send a no-op.
+   */
+  dedupeKey?: string;
 }
 
 export async function notify(input: NotifyInput): Promise<void> {
@@ -54,6 +60,7 @@ export async function notify(input: NotifyInput): Promise<void> {
         body,
         referenceId: referenceType ? (input.referenceId ?? null) : null,
         referenceType,
+        ...(input.dedupeKey ? { dedupeKey: input.dedupeKey } : {}),
       },
     });
 
@@ -78,8 +85,15 @@ export async function notify(input: NotifyInput): Promise<void> {
       });
     }
   } catch (err) {
+    // A duplicate dedupe key means this reminder already went out on an
+    // earlier sweep — expected, not a failure.
+    if (isDuplicateKey(err)) return;
     console.error("Notification failed:", err);
   }
+}
+
+function isDuplicateKey(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
 }
 
 // A confirmed Chapa payment. A disbursement lands as LR-05 to both parties
