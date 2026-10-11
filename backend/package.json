@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "tsx --env-file=../.env --watch src/index.ts",
     "build": "tsc -b",
-    "start": "node --env-file=../.env dist/index.js",
+    "start": "node dist/index.js",
+    "start:local": "node --env-file=../.env dist/index.js",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "postinstall": "prisma generate",

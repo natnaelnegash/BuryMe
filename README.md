@@ -34,7 +34,9 @@ stable.
 ```
 
 See [`CLAUDE.md`](./CLAUDE.md) for architecture decisions, the development
-approach, and the build plan — read that first before writing code.
+approach, and the build plan — read that first before writing code. See
+[`DEPLOY.md`](./DEPLOY.md) for deploying, including what is deliberately not
+yet hardened for real money.
 
 ## Getting started
 
@@ -52,9 +54,18 @@ Copy `.env` **before** installing: the backend's `postinstall` runs
 need the database to be reachable). The file lives at the repo root, not in
 `backend/` — `prisma.config.ts` and both dev scripts load it from there.
 
-The app runs without Firebase or Chapa credentials filled in, but you can't
-sign in or move money. With `AFROMESSAGE_API_KEY` left blank, Telebirr OTP
-codes are logged to the backend console instead of being sent as SMS.
+Two things the backend refuses to start without:
+
+- **The three `FIREBASE_*` values.** `config/env.ts` requires them at import.
+- **Chapa credentials, or `CHAPA_FAKE=1`.** `.env.example` ships
+  `CHAPA_FAKE=1`, which selects a keyless double that fabricates successful
+  transfers so the whole disbursement flow works offline. It also accepts
+  _every_ webhook signature, which is why it has to be asked for explicitly
+  and must never be set in a deployed environment.
+
+`AFROMESSAGE_API_KEY` left blank is fine and is the normal local setup:
+Telebirr OTP codes are logged to the backend console instead of being sent
+as SMS.
 
 ## Everyday commands
 
@@ -146,6 +157,6 @@ Not done yet:
   recursive script down with it. The backend suite passes — run
   `pnpm --filter @buryme/backend test` until web gets tests or
   `--passWithNoTests`.
-- **CI doesn't currently run.** `.github/workflows/ci.yml` triggers on pushes
-  and PRs to `main`, but this repo's branch is `master`, so nothing fires —
-  including the generated-types check. One-word fix in the workflow.
+- No web tests at all, and FCM push is inert on the web client (nothing
+  registers a token and there is no service worker). The Socket.io layer
+  covers real-time on web; push matters for the Flutter app.

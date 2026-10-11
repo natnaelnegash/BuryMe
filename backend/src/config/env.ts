@@ -27,3 +27,32 @@ export const env = {
   // lazily there so route tests (which mock the DB and Firebase) don't need
   // the full env to import them.
 };
+
+/**
+ * Checked once at server boot (index.ts), not at import — route tests mock
+ * the DB and never load a real environment, and `app.ts` is imported
+ * directly by supertest.
+ *
+ * Only reached when the real Chapa client is in use: talking to the live
+ * gateway implies a reachable callback origin and a real return origin, and
+ * the alternative to checking here is three separate silent failures — an
+ * unsigned-webhook-accepting fake client, hosted-checkout payers redirected
+ * to localhost, and no per-transaction callback_url at all.
+ */
+export function assertRuntimeConfig(): void {
+  if (process.env.CHAPA_FAKE === "1") return;
+
+  const missing = [
+    "CHAPA_SECRET_KEY",
+    "CHAPA_WEBHOOK_SECRET",
+    "WEB_ORIGIN",
+    "API_PUBLIC_ORIGIN",
+  ].filter((name) => !process.env[name]);
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variable(s): ${missing.join(", ")}. ` +
+        "Set them, or set CHAPA_FAKE=1 for keyless local development.",
+    );
+  }
+}

@@ -3,6 +3,7 @@ import type { Server as HttpServer } from "node:http";
 import { Server, type Socket } from "socket.io";
 
 import { auth } from "./firebase.js";
+import { webOrigin } from "./origins.js";
 
 // Socket.io real-time layer (§13). The PRD's §13.2 catalog names the events
 // but not the socket channel, so the wire format is defined here:
@@ -22,9 +23,9 @@ let io: Server | null = null;
 export const USER_ROOM = (uid: string) => `user:${uid}`;
 
 export function initSocket(httpServer: HttpServer): Server {
-  // Mirrors the REST layer's `app.use(cors())` — open, and tightened in
-  // one place when that is.
-  io = new Server(httpServer, { cors: { origin: true, credentials: true } });
+  // Same allow-list as the REST layer in app.ts; both read
+  // config/origins.ts so the two can't drift.
+  io = new Server(httpServer, { cors: { origin: webOrigin(), credentials: true } });
 
   io.use(async (socket: Socket, next) => {
     try {

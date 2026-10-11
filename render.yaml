@@ -1,0 +1,99 @@
+# Render blueprint — staging/demo. Three resources: managed Postgres, the
+# API (long-lived process, so Socket.io and the §13.3 reminder scheduler
+# both work), and the web client as a static site.
+#
+# Every secret is `sync: false`, meaning Render prompts for it rather than
+# reading it from this file — nothing here is committed with a real value.
+#
+# Railway equivalent, if you go that way instead: Railway has no blueprint
+# format, so set the same build/start commands, the same env vars and the
+# pre-deploy migration in its dashboard. Railway has no static-site type —
+# serve `web/dist` with a static file server or use Cloudflare Pages for the
+# web half. See DEPLOY.md.
+
+databases:
+  - name: buryme-postgres
+    databaseName: buryme
+    user: buryme
+    plan: basic-256mb
+    region: frankfurt
+
+services:
+  # ── API ─────────────────────────────────────────────────────────────
+  - type: web
+    name: buryme-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    # `backend build` is `tsc -b`, which builds the /shared project
+    # reference first — no separate shared build needed here.
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @buryme/backend build
+    startCommand: pnpm --filter @buryme/backend start
+    # Migrations were previously a manual step in no pipeline at all.
+    preDeployCommand: pnpm db:migrate:deploy
+    # Liveness, not readiness: /api/v1/health is dependency-free on purpose.
+    # Pointing the host check at /api/v1/ready instead would make a Postgres
+    # blip restart the instance in a loop.
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: buryme-postgres
+          property: connectionString
+      # Must be this service's own public URL — Chapa posts the
+      # per-transaction callback to <API_PUBLIC_ORIGIN>/api/v1/webhooks/chapa.
+      - key: API_PUBLIC_ORIGIN
+        sync: false
+      # The web client's origin: CORS allow-list and Chapa's checkout return.
+      - key: WEB_ORIGIN
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      # Paste the PEM with literal \n sequences, as .env.example describes.
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      # Chapa test-mode keys. Both are required: the server refuses to boot
+      # without them, by design — the keyless fake client accepts every
+      # webhook signature and must never be selected by accident.
+      - key: CHAPA_SECRET_KEY
+        sync: false
+      - key: CHAPA_WEBHOOK_SECRET
+        sync: false
+      # Long random string; OTP hashes are peppered with it.
+      - key: OTP_PEPPER
+        sync: false
+      # Leave both unset to log OTP codes to the service log instead of
+      # sending SMS — appropriate for a demo, and costs nothing.
+      - key: AFROMESSAGE_API_KEY
+        sync: false
+      - key: AFROMESSAGE_FROM
+        sync: false
+
+  # ── Web ─────────────────────────────────────────────────────────────
+  - type: web
+    name: buryme-web
+    runtime: static
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @buryme/web build
+    staticPublishPath: web/dist
+    # React Router serves paths like /obligations/:id client-side, so every
+    # deep link has to reach index.html or a reload 404s at the host.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Vite inlines these at build time (web/src/api/client.ts reads
+      # import.meta.env.VITE_API_BASE_URL into a module constant), so they
+      # are build inputs, not runtime config: changing one needs a rebuild.
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: VITE_FIREBASE_API_KEY
+        sync: false
+      - key: VITE_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: VITE_FIREBASE_PROJECT_ID
+        sync: false

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   lint-and-typecheck:
@@ -46,3 +46,9 @@ jobs:
 
       - name: Typecheck
         run: pnpm -r run typecheck
+
+      # Filtered to the backend on purpose: the root `pnpm test` fails
+      # because @buryme/web declares `vitest run` with no test files, and
+      # vitest exits non-zero on that.
+      - name: Test
+        run: pnpm --filter @buryme/backend test
