@@ -5,11 +5,8 @@ import styles from "./AuthLayout.module.css";
 interface AuthLayoutProps {
   title: string;
   subtitle: string;
-  /** Card contents — the only part that differs between auth screens. */
   children: ReactNode;
-  /** The link line under the card, e.g. "Already have an account? Log in". */
   footer?: ReactNode;
-  /** Figma shows a "← Back" control above the brand on the OTP screen. */
   onBack?: () => void;
 }
 

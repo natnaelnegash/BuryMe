@@ -11,7 +11,6 @@ export const authRouter = Router();
 
 authRouter.use(requireAuth);
 
-// GET /auth/me — bootstrap call on app launch (contract: getCurrentUser).
 authRouter.get("/me", async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
@@ -27,7 +26,6 @@ authRouter.get("/me", async (req, res, next) => {
   }
 });
 
-// POST /auth/register — first-login provisioning (contract: registerUser).
 authRouter.post("/register", async (req, res, next) => {
   try {
     const body = parseBody(registerRequestSchema, req.body);
@@ -45,9 +43,6 @@ authRouter.post("/register", async (req, res, next) => {
     const user = await prisma.user.create({
       data: {
         id: uid,
-        // Sourced from the verified Firebase identity, per contract — not
-        // from the request body. Distinct from any TelebirrAccount number
-        // linked later (Slice 2).
         identifier: req.auth!.phoneNumber ?? uid,
         displayName: body.display_name,
       },
@@ -59,9 +54,6 @@ authRouter.post("/register", async (req, res, next) => {
   }
 });
 
-// POST /auth/fcm-token — device push token registration (contract: registerFcmToken).
-// Assumes it's only called after a successful /auth/register — the contract
-// defines no 404 response for this endpoint (400/401 only).
 authRouter.post("/fcm-token", async (req, res, next) => {
   try {
     const body = parseBody(fcmTokenRequestSchema, req.body);
@@ -76,9 +68,6 @@ authRouter.post("/fcm-token", async (req, res, next) => {
   }
 });
 
-// DELETE /auth/fcm-token — contract: deleteFcmToken. Contract documents only
-// 204/401 for this endpoint (no 400), so a missing/malformed query param is
-// treated as "nothing to remove" rather than a validation error.
 authRouter.delete("/fcm-token", async (req, res, next) => {
   try {
     const token = req.query.fcm_token;

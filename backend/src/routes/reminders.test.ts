@@ -27,7 +27,6 @@ const { prisma } = await import("../db/client.js");
 const { Prisma } = await import("../generated/prisma/client.js");
 const { runReminderSweep } = await import("../domain/reminders.js");
 
-// A fixed clock: everything below is relative to this.
 const NOW = new Date("2026-10-06T09:30:00.000Z");
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -71,10 +70,8 @@ describe("RS-04 — upcoming installments", () => {
       .mocked(prisma.installment.findMany)
       .mock.calls.map((c) => (c[0] as { where: Record<string, unknown> }).where);
 
-    // Two lead times from §13.3, plus the overdue query.
     const dues = wheres.map((w) => w.dueDate).filter((d) => d instanceof Date);
     expect(dues).toEqual([utc("2026-10-09"), utc("2026-10-07")]);
-    // Settled and Disputed obligations are excluded (§13.3).
     expect(wheres[0]).toMatchObject({
       status: "Pending",
       schedule: { obligation: { status: { in: ["Active", "PartiallyPaid"] } } },
@@ -82,8 +79,6 @@ describe("RS-04 — upcoming installments", () => {
   });
 
   it("sends to the borrower with the catalog's copy and a per-occasion key", async () => {
-    // The overdue query passes a { lt } range rather than a Date, so this
-    // has to answer only the exact-date lookups.
     vi.mocked(prisma.installment.findMany).mockImplementation((async (args: {
       where: { dueDate?: unknown };
     }) =>
@@ -104,7 +99,6 @@ describe("RS-04 — upcoming installments", () => {
       body: "Your installment of 500 ETB is due on 9 Oct 2026. Tap to pay.",
       referenceId: "obl-1",
       referenceType: "Obligation",
-      // The 3-day and 1-day sends are different occasions for the same row.
       dedupeKey: "RS-04:inst-1:3",
     });
   });
@@ -195,7 +189,6 @@ describe("REM-01 — unanswered external payments", () => {
     };
     expect(where.recordedAt.lte).toEqual(utc("2026-10-03"));
 
-    // The borrower recorded it, so the lender is the one who owes a response.
     expect(createdNotifications()[0]).toMatchObject({
       userId: lender.id,
       notificationType: "REM-01",

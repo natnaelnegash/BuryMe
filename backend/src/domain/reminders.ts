@@ -2,19 +2,8 @@ import { reminderConfig } from "../config/reminders.js";
 import { prisma } from "../db/client.js";
 import { etb, notify } from "./notifications.js";
 
-// Time-triggered reminders (§13.3). Unlike every other notification, these
-// fire from the passage of time rather than a state change, so a sweep
-// re-evaluates the same rows repeatedly — each one carries a dedupe key
-// naming the occasion it is for, and the unique index makes a repeat send a
-// no-op.
-//
-// §13.3 is explicit that RS-04/05/06 only apply to obligations in Active or
-// Partially Paid status: nothing is sent for Settled or Disputed ones.
-
 const OPEN_STATUSES = ["Active", "PartiallyPaid"] as const;
 
-// Dates are stored as @db.Date, so comparisons are done on midnight UTC
-// boundaries rather than instants.
 function dayStart(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
@@ -29,7 +18,6 @@ function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-// The catalog writes dates as "12 Sep 2026".
 function human(date: Date): string {
   return date.toLocaleDateString("en-GB", {
     day: "numeric",
@@ -46,7 +34,6 @@ export interface SweepResult {
   confirmationChases: number;
 }
 
-// RS-04 — an installment falling due in `leadDays`.
 async function sweepUpcomingInstallments(now: Date, leadDays: number[]): Promise<number> {
   let sent = 0;
   for (const lead of leadDays) {
@@ -74,8 +61,6 @@ async function sweepUpcomingInstallments(now: Date, leadDays: number[]): Promise
   return sent;
 }
 
-// RS-05 — the day after an installment's due date passed unpaid. Fires once
-// per installment, however many sweeps see it still outstanding.
 async function sweepOverdueInstallments(now: Date): Promise<number> {
   const installments = await prisma.installment.findMany({
     where: {
@@ -98,8 +83,6 @@ async function sweepOverdueInstallments(now: Date): Promise<number> {
   return installments.length;
 }
 
-// RS-06 — a Lump Sum obligation falling due. Installments obligations get
-// RS-04 per installment instead, so they are excluded here.
 async function sweepUpcomingObligations(now: Date, leadDays: number[]): Promise<number> {
   let sent = 0;
   for (const lead of leadDays) {
@@ -132,7 +115,6 @@ async function sweepUpcomingObligations(now: Date, leadDays: number[]): Promise<
   return sent;
 }
 
-// REM-01 — an externally recorded payment still waiting on the other party.
 async function sweepConfirmationChases(now: Date, afterDays: number): Promise<number> {
   const cutoff = addDays(now, -afterDays);
   const payments = await prisma.payment.findMany({
@@ -146,7 +128,6 @@ async function sweepConfirmationChases(now: Date, afterDays: number): Promise<nu
   });
 
   for (const payment of payments) {
-    // The person who recorded it isn't the one who owes a response.
     const awaiting =
       payment.recordedByUserId === payment.payerId ? payment.recipientId : payment.payerId;
     const recorder =
@@ -166,8 +147,6 @@ async function sweepConfirmationChases(now: Date, afterDays: number): Promise<nu
   return payments.length;
 }
 
-// One pass over everything §13.3 schedules. Takes `now` so it can be tested
-// against a fixed clock.
 export async function runReminderSweep(now: Date = new Date()): Promise<SweepResult> {
   const config = reminderConfig();
   return {
@@ -178,14 +157,12 @@ export async function runReminderSweep(now: Date = new Date()): Promise<SweepRes
   };
 }
 
-// Runs the sweep on an interval for the life of the process. One sweep at
-// boot so a restart doesn't skip a day's reminders. Returns a stop function.
 export function startReminderScheduler(): () => void {
   const { sweepMinutes } = reminderConfig();
   let running = false;
 
   const tick = async () => {
-    // A slow sweep must not overlap the next tick and double-send.
+    // A slow sweep must not overlap the next tick and send twice.
     if (running) return;
     running = true;
     try {
@@ -199,7 +176,6 @@ export function startReminderScheduler(): () => void {
 
   void tick();
   const handle = setInterval(() => void tick(), sweepMinutes * 60_000);
-  // Don't hold the process open on shutdown.
   handle.unref?.();
   return () => clearInterval(handle);
 }

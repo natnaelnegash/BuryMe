@@ -10,14 +10,10 @@ import { requireAuth } from "../middleware/auth.js";
 import { toNotificationPreferencesResponse } from "../domain/notificationPrefs.js";
 import { toNotificationResponse } from "../serializers/notification.js";
 
-// In-app notification feed and read state (§6.1.5, §8.11). Notifications
-// are raised by domain/notifications.ts wherever the triggering event happens;
-// this router only reads them back and marks them read.
 export const notificationsRouter = Router();
 
 notificationsRouter.use(requireAuth);
 
-// GET /notifications — contract: listNotifications. Newest first.
 notificationsRouter.get("/", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -42,10 +38,6 @@ notificationsRouter.get("/", async (req, res, next) => {
   }
 });
 
-// POST /notifications/read — contract: markNotificationsRead. An omitted
-// `notification_ids` marks the whole feed read. Always scoped to the
-// caller, so passing someone else's id silently marks nothing rather than
-// leaking whether it exists.
 notificationsRouter.post("/read", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -66,15 +58,11 @@ notificationsRouter.post("/read", async (req, res, next) => {
   }
 });
 
-// PATCH /notifications/preferences — contract: updateNotificationPreferences.
-// One switch per §13.2 event family, matching the seven rows of the
-// preferences screen (66:744).
 notificationsRouter.patch("/preferences", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
     const body = parseBody(notificationPreferencesSchema, req.body ?? {});
 
-    // PATCH semantics: only the switches actually present are touched.
     const user = await prisma.user.update({
       where: { id: uid },
       data: {

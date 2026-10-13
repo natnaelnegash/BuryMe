@@ -12,12 +12,9 @@ import { StateCard } from "../../components/ui/StateCard.js";
 import { useSearchUsersQuery } from "../../hooks/useUsers.js";
 import styles from "./SearchPage.module.css";
 
-// Figma: Screen — User Discovery (38:1533).
 export function SearchPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  // Results follow typing (debounced in the hook). The form and its button
-  // remain so Enter still works and so an impatient search skips the wait.
   const { data, isSearching, searchNow, term, error } = useSearchUsersQuery(query);
 
   const results = data ?? [];
@@ -53,8 +50,6 @@ export function SearchPage() {
 
         {error && <ErrorState error={error} onRetry={searchNow} inset />}
 
-        {/* While refining a term the previous results stay up, so the spinner
-            sits beside them rather than replacing them. */}
         {isSearching && results.length === 0 && <Spinner block label="Searching for people" />}
 
         {searched && !error && !isSearching && results.length === 0 && (

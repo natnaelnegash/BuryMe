@@ -48,9 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus("loading");
       await loadProfile();
     });
-    // `loadProfile` intentionally omitted — it's stable across renders
-    // (recreated each render but functionally identical) and this effect
-    // should only ever re-subscribe on mount/unmount.
   }, []);
 
   return (

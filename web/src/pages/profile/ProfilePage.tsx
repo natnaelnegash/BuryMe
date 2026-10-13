@@ -34,9 +34,6 @@ export function ProfilePage() {
     >
       <div className={styles.avatarRow}>
         <Avatar name={buryMeUser.display_name} size={56} />
-        {/* Photo upload is a separate flow the contract defers to a later
-            slice (multer/S3, §11.1.6) — surfaced as unavailable rather than
-            hidden, using the design's own "reason" affordance. */}
         <Button kind="secondary" size="small" disabled reason="Photo upload is coming soon">
           Change photo
         </Button>
@@ -56,8 +53,6 @@ export function ProfilePage() {
           }
           tone={telebirrVerified ? "teal" : "gray"}
           action={
-            // A saved-but-unverified number's useful action is finishing
-            // verification — the number screen re-sends a code on submit.
             <Button kind="secondary" size="small" onClick={() => navigate("/profile/telebirr")}>
               {!telebirr?.telebirr_number
                 ? "Link number"

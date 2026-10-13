@@ -1,6 +1,3 @@
-/* Figma: Screen — Notification Feed (37:1443 / body 37:1472). Body stack
- * is 24; the row list (37:1481) is a full-width vertical stack at 12. */
-
 .page {
   display: flex;
   flex-direction: column;
@@ -29,8 +26,6 @@
   flex-direction: column;
   gap: 12px;
 }
-
-/* "State — Empty Notifications" (39:1841): radius 18, 28 padding, centred. */
 
 .headRow {
   display: flex;

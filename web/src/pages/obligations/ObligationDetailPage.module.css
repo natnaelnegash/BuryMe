@@ -1,6 +1,3 @@
-/* Figma: Obligation Detail (14:2 / 14:97 / 14:198 / 14:300). Body is
- * vertical, gap 20; then "Cols" — 700px main + 476px side, gap 24. */
-
 .page {
   display: flex;
   flex-direction: column;
@@ -49,7 +46,6 @@
   box-shadow: var(--elevation-card);
 }
 
-/* Header Card (14:35): 24/26 padding, gap 16, centred. */
 .headerCard {
   display: flex;
   align-items: center;
@@ -106,14 +102,12 @@
   color: var(--color-amber);
 }
 
-/* Details Card (14:50): 8/26 padding, rows supply their own 12px. */
 .detailsCard {
   display: flex;
   flex-direction: column;
   padding: 8px 26px;
 }
 
-/* History Card (14:66): 22/26 padding, gap 16. */
 .historyCard {
   display: flex;
   flex-direction: column;
@@ -133,7 +127,6 @@
   padding: 0;
 }
 
-/* Actions Card (14:90): 24 padding, gap 12. */
 .actionsCard {
   display: flex;
   flex-direction: column;
@@ -141,7 +134,6 @@
   padding: 24px;
 }
 
-/* An inline link sitting in a Summary Row's value slot. */
 .inline {
   color: var(--color-teal);
   text-decoration: none;
@@ -156,7 +148,6 @@
   color: var(--color-red);
 }
 
-/* Payments card rows — same rhythm as the Summary Row (12px vertical). */
 .paymentList {
   display: flex;
   flex-direction: column;

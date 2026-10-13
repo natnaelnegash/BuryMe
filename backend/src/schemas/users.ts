@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// Mirrors contract/openapi.yaml's UpdateProfileRequest and
-// VerifyTelebirrRequest schemas (Users tag) exactly.
 export const updateProfileRequestSchema = z
   .object({
     display_name: z
@@ -20,15 +18,11 @@ export const verifyTelebirrRequestSchema = z
   })
   .strict();
 
-// GET /users/search's query params (q, limit) — not a request body, but
-// `parseBody` is a generic Zod-parse helper despite its name and works
-// equally well here.
 export const searchUsersQuerySchema = z.object({
   q: z.string().min(2).max(100),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-// POST /users/me/telebirr/verify body — contract ConfirmTelebirrOtpRequest.
 export const confirmTelebirrOtpRequestSchema = z
   .object({
     code: z.string().regex(/^\d{6}$/),

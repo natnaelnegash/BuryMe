@@ -21,12 +21,6 @@ import {
 import { formatMoney } from "../../lib/money.js";
 import styles from "./SettlementPage.module.css";
 
-// Figma: Screen — Bilateral Settlement (27:525) and Screen — Bilateral
-// Settlement · Respond (49:3034 / host 49:3064). One layout, two modes:
-// proposing a settlement to someone, and responding to the one they sent.
-// The card, the three Summary Rows and the net line are identical; only the
-// copy and the two buttons differ.
-
 type Obligation = Schemas["Obligation"];
 
 function errorMessage(error: unknown): string | null {
@@ -37,19 +31,14 @@ function errorMessage(error: unknown): string | null {
 interface CardProps {
   counterpartyName: string;
   pill: string;
-  /** What the counterparty still owes the viewer. */
   theyOwe: Schemas["Money"] | null;
-  /** What the viewer still owes the counterparty. */
   youOwe: Schemas["Money"] | null;
   net: Schemas["Money"];
-  /** Whether the net lands in the viewer's pocket. */
   netIncoming: boolean;
   note: string;
   children: React.ReactNode;
 }
 
-// The shared card body — "R Head" (27:561), the "Sum" stack (27:570), the
-// teal Note (27:583) and the button row (27:585).
 function SettlementCard({
   counterpartyName,
   pill,
@@ -88,8 +77,6 @@ function SettlementCard({
   );
 }
 
-// ── Propose (27:525) ────────────────────────────────────────────────────
-
 export function SettlementProposePage() {
   const { counterpartyId } = useParams<{ counterpartyId: string }>();
   const navigate = useNavigate();
@@ -97,9 +84,6 @@ export function SettlementProposePage() {
   const uid = buryMeUser?.user_id;
   const create = useCreateSettlementSuggestion();
 
-  // The pair is the viewer's own two obligations, so the amounts to show
-  // come straight off the list they can already see. The backend does the
-  // pairing again on submit — this is display only.
   const { data, isLoading } = useObligationsQuery({ limit: 100 });
   const open = (data?.data ?? []).filter(
     (o) => o.status === "Active" || o.status === "Partially Paid",
@@ -171,8 +155,6 @@ export function SettlementProposePage() {
   );
 }
 
-// ── Respond (49:3034) ───────────────────────────────────────────────────
-
 export function SettlementRespondPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -203,8 +185,6 @@ export function SettlementRespondPage() {
   const theirResponse = isUserA ? suggestion.user_b_response : suggestion.user_a_response;
   const netIncoming = suggestion.net_recipient.user_id === uid;
 
-  // The obligation the viewer borrows on is theirs to pay; the other is
-  // what the counterparty owes them.
   const byId = new Map((obligations?.data ?? []).map((o) => [o.obligation_id, o] as const));
   const mine = byId.get(isUserA ? suggestion.obligation_id_a : suggestion.obligation_id_b);
   const theirs = byId.get(isUserA ? suggestion.obligation_id_b : suggestion.obligation_id_a);
@@ -275,8 +255,6 @@ export function SettlementRespondPage() {
   );
 }
 
-// Display-only netting for the propose screen — the authoritative figure is
-// computed server-side when the suggestion is created.
 function netBetween(theyOwe: Obligation, youOwe: Obligation) {
   const them = theyOwe.outstanding_balance.amount;
   const you = youOwe.outstanding_balance.amount;

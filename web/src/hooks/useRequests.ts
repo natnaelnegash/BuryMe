@@ -12,10 +12,6 @@ import {
   type CreateRequestBody,
 } from "../api/requests.js";
 
-// Single query key namespace for the whole Requests resource — any mutation
-// below invalidates all of it rather than tracking narrower keys, since the
-// list is small enough that a full refetch is cheap and this keeps the
-// invalidation logic trivially correct.
 const REQUESTS_KEY = ["requests"] as const;
 
 export function useRequestsQuery(params?: { role?: "initiator" | "recipient" }) {

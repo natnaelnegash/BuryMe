@@ -1,6 +1,3 @@
-/* The title/subtitle block every list and detail screen opens with
- * (e.g. "Requests" + its one-line explainer in 27:172). */
-
 .header {
   display: flex;
   flex-direction: column;

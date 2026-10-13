@@ -2,9 +2,6 @@ import type { Schemas } from "@buryme/shared";
 
 import type { Notification } from "../generated/prisma/client.js";
 
-// `notificationType` and `referenceType` are stored as plain strings — the
-// catalog ids contain hyphens, which Prisma enums can't express — so the
-// contract's enums are the authority and this is where the two meet.
 export function toNotificationResponse(notification: Notification): Schemas["Notification"] {
   return {
     notification_id: notification.id,

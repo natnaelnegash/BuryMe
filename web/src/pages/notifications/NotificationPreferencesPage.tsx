@@ -12,13 +12,9 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { useUpdateNotificationPreferences } from "../../hooks/useNotifications.js";
 import styles from "./NotificationPreferencesPage.module.css";
 
-// Figma: Screen — Notification Preferences (66:744 / host 66:774). Seven
-// switches, one per §13.2 event family, then the gray note and Save.
-
 type Prefs = Schemas["NotificationPreferences"];
 type PrefKey = keyof Prefs;
 
-// Copy taken verbatim from the frame's Pref Rows (66:808 onward).
 const ROWS: { key: PrefKey; name: string; desc: string }[] = [
   {
     key: "requests",
@@ -62,8 +58,6 @@ export function NotificationPreferencesPage() {
   const { buryMeUser } = useAuth();
   const update = useUpdateNotificationPreferences();
 
-  // The contract has no GET for preferences, so the current values come off
-  // the signed-in user's profile.
   const saved = buryMeUser?.notification_preferences;
   const [prefs, setPrefs] = useState<Prefs | null>(saved ?? null);
   useEffect(() => {

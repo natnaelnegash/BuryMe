@@ -12,16 +12,10 @@ interface ObligationCardProps {
   name: string;
   subtitle: string;
   amount: string;
-  /** Omitted when the status isn't known to this viewer — the pill is then
-   * left out rather than guessed at. */
   status?: string;
   direction: ObligationDirection;
-  /** Figma: the card's second variant axis (46:2043). A Group card swaps the
-   * single Avatar for an Avatar Stack; everything else is identical. */
   type?: "personal" | "group";
-  /** Group cards only — the people on the bill, for the stack. */
   avatarNames?: string[];
-  /** Route to the obligation's detail screen; makes the card a link. */
   to?: string;
 }
 

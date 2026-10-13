@@ -1,5 +1,3 @@
-/* Figma: List — Requests (27:142). */
-
 .page {
   display: flex;
   flex-direction: column;
@@ -17,7 +15,6 @@
   flex-direction: column;
   gap: 12px;
 }
-
 
 .error {
   font: var(--text-micro);

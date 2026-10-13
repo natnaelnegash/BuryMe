@@ -7,11 +7,7 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     payment: { findUnique: vi.fn(), update: vi.fn() },
-    // Read by the push path when a notification fires.
     user: { findUnique: vi.fn() },
-    // Notifications are raised as a side effect of most of these routes.
-    // Mocked with a resolved row so the emit path runs to completion
-    // instead of failing silently inside notify()'s catch.
     notification: {
       create: vi.fn().mockResolvedValue({
         id: "ntf-1",
@@ -75,8 +71,6 @@ function activeObligation(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// An external repayment recorded by the lender ("I received cash"), so the
-// borrower is the one who must respond.
 function pendingExternal(overrides: Record<string, unknown> = {}) {
   return {
     id: "pay-1",
@@ -108,7 +102,6 @@ beforeEach(() => {
       ? ({ uid: lender.id, phone_number: lender.identifier } as never)
       : ({ uid: borrower.id, phone_number: borrower.identifier } as never),
   );
-  // Echo the update back as the "confirmed" row.
   vi.mocked(prisma.payment.update).mockImplementation((async (args: {
     data: Record<string, unknown>;
   }) => ({
@@ -164,9 +157,6 @@ describe("POST /payments/:id/acknowledge", () => {
     expect(data.outstandingBalance.toNumber()).toBe(0);
     expect(data.status).toBe("Settled");
 
-    // PAY-04 back to the lender who recorded it, then PAY-07 to both
-    // parties. The settled read is what the notification path re-fetches
-    // after the transaction, so it has to look settled.
     vi.mocked(prisma.obligation.findUnique).mockResolvedValue(
       activeObligation({
         status: "Settled",

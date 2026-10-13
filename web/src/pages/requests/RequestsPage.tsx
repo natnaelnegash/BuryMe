@@ -21,12 +21,8 @@ function errorMessage(error: unknown): string | null {
   return error instanceof ApiError ? error.message : "Something went wrong.";
 }
 
-// Figma's filter tabs: Received / Sent, which map onto the API's `role`.
 type Tab = "recipient" | "initiator";
 
-// Figma: List — Requests (27:142). Rows are the Request Row component; the
-// only inline action is Cancel — responding (accept / decline / counter)
-// happens on the dedicated Request Response screen at /requests/:id.
 export function RequestsPage() {
   const navigate = useNavigate();
   const { buryMeUser } = useAuth();
@@ -63,7 +59,6 @@ export function RequestsPage() {
       {isLoading && <Spinner block label="Loading requests" />}
       {queryError && <ErrorState error={queryError} onRetry={() => void refetch()} />}
 
-      {/* One empty block covers both tabs, as the design has one (39:1835). */}
       {!isLoading && !queryError && requests.length === 0 ? (
         <StateCard
           glyph="✉"

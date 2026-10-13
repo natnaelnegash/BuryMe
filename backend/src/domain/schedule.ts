@@ -3,17 +3,10 @@ import type { Installment, Obligation, Prisma } from "../generated/prisma/client
 import { ApiError } from "../middleware/errors.js";
 import type { ProposedTerms } from "../schemas/requests.js";
 
-// Repayment schedules (§6.3.2, §8.7, §8.8): fixed at agreement, read-only
-// after. Rows are created inside the accept transaction; `Pending →
-// Overdue` is applied lazily whenever a schedule is read or paid against,
-// since the stack has no scheduler yet (reminders arrive with Slice 9).
-
 export type ScheduleWithInstallments = Prisma.RepaymentScheduleGetPayload<{
   include: { installments: true };
 }>;
 
-// The nested-create payload for `obligation.create({ data: { schedule: … } })`
-// so accept keeps everything in one transaction.
 export function scheduleCreateInput(
   schedule: NonNullable<ProposedTerms["schedule"]>,
 ): Prisma.RepaymentScheduleCreateNestedOneWithoutObligationInput {
@@ -36,8 +29,7 @@ function startOfToday(): Date {
   return d;
 }
 
-// Persists Pending → Overdue for rows whose due date has passed. Cheap and
-// idempotent, so callers run it before every read that shows status.
+// Idempotent — callers run it before every read that shows installment status.
 export async function refreshInstallmentStatuses(scheduleId: string): Promise<void> {
   await prisma.installment.updateMany({
     where: { scheduleId, status: "Pending", dueDate: { lt: startOfToday() } },
@@ -47,9 +39,6 @@ export async function refreshInstallmentStatuses(scheduleId: string): Promise<vo
 
 const ORDERED = { installments: { orderBy: { dueDate: "asc" as const } } };
 
-// Loads the obligation's schedule, creating it from the originating
-// request's agreed terms if the obligation was accepted before Slice 6
-// materialised schedules. Throws 404 for Lump Sum (contract).
 export async function loadSchedule(obligation: Obligation): Promise<ScheduleWithInstallments> {
   if (obligation.repaymentType !== "Installments") {
     throw new ApiError("NOT_FOUND", "This obligation is repaid as a lump sum — no schedule.", 404);
@@ -75,8 +64,6 @@ export async function loadSchedule(obligation: Obligation): Promise<ScheduleWith
   });
 }
 
-// Pre-Slice-6 obligations: the agreed schedule lives only in the accepted
-// request's JSON (counter-proposal wins over the original, as at accept).
 async function backfillTermsFor(
   obligation: Obligation,
 ): Promise<NonNullable<ProposedTerms["schedule"]>> {
@@ -96,8 +83,6 @@ async function backfillTermsFor(
   return schedule;
 }
 
-// The installment a payment should target by default: the earliest
-// Overdue one, else the earliest Pending one.
 export function nextPayable(installments: Installment[]): Installment | undefined {
   return (
     installments.find((i) => i.status === "Overdue") ??

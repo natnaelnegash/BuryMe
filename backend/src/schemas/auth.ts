@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-// Mirrors contract/openapi.yaml's RegisterRequest and FcmTokenRequest
-// schemas exactly (§12.2.1). Keep these in lockstep with the contract —
-// if the contract changes, update here too.
 export const registerRequestSchema = z
   .object({
     display_name: z

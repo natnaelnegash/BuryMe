@@ -5,14 +5,8 @@ import { ApiError } from "../middleware/errors.js";
 import type { createGroupExpenseInputSchema } from "../schemas/groupExpenses.js";
 import type { z } from "zod";
 
-// parseBody infers the schema's *input* type (currency has a default), so
-// match that rather than the parsed output.
 export type GroupExpenseInput = z.input<typeof createGroupExpenseInputSchema>;
 
-// Cross-field validation for a group expense (§12.2.2), plus the lookups
-// that make it meaningful: participants must be real users, distinct, and
-// not the payer. Kept out of the zod schema because it needs the caller's
-// identity and the database.
 export async function assertValidGroupExpense(
   body: GroupExpenseInput,
   payerId: string,
@@ -84,8 +78,6 @@ export async function assertValidGroupExpense(
     );
   }
 
-  // Shares (plus the payer's own, when included) must reconstruct the
-  // total within 0.01 ETB.
   const assigned = body.participants.reduce(
     (sum, p) => sum.plus(new Prisma.Decimal(p.assigned_amount.amount)),
     new Prisma.Decimal(body.payer_share_amount?.amount ?? 0),

@@ -1,5 +1,3 @@
-/* Figma: component set "Field" (29:976) — State: Editable / Read-only. */
-
 .field {
   display: flex;
   flex-direction: column;
@@ -33,7 +31,6 @@
   border-color: var(--color-teal);
 }
 
-/* Read-only variant: the field-bg wash, no white input surface. */
 .readonly {
   background: var(--color-field-bg);
   color: var(--color-text-gray);

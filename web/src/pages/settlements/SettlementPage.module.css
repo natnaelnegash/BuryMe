@@ -1,14 +1,9 @@
-/* Figma: Screen — Bilateral Settlement (27:525) and · Respond (49:3034).
- * One card, 680 column. CenteredLayout supplies the back control, head and
- * card shell; these are the card's own contents. */
-
 .stack {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* "R Head" (27:561): avatar + name column + trailing pill. */
 .head {
   display: flex;
   align-items: center;
@@ -33,13 +28,11 @@
   color: var(--color-text-gray);
 }
 
-/* "Sum" (27:570) — Summary Rows supply their own 12px rhythm. */
 .sum {
   display: flex;
   flex-direction: column;
 }
 
-/* The final row (27:580): no divider, a heavier label and a display value. */
 .netRow {
   display: flex;
   align-items: center;

@@ -20,8 +20,6 @@ export function useGroupExpenseQuery(expenseId: string | undefined) {
   });
 }
 
-// Creating an expense spawns one obligation per participant, so the
-// obligations namespace is stale too.
 export function useCreateGroupExpense() {
   const queryClient = useQueryClient();
   return useMutation({

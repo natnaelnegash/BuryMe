@@ -8,12 +8,10 @@ interface RequestRowProps {
   name: string;
   detail: string;
   amount: string;
-  /** Teal when the money moves toward you, amber when it moves away. */
   amountDirection?: "incoming" | "outgoing";
   status: string;
   statusColor?: PillStatus;
   accent?: AvatarAccent;
-  /** Buttons for this row — the Figma `Action` axis, supplied by the caller. */
   actions?: ReactNode;
 }
 

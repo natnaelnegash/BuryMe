@@ -11,9 +11,6 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { useSendTelebirrOtp, useVerifyTelebirr } from "../../hooks/useUsers.js";
 import styles from "./TelebirrPage.module.css";
 
-// Figma: Screen — Telebirr Verification (38:1694). Saves the number
-// (POST /users/me/telebirr), asks the backend to SMS a code
-// (POST /users/me/telebirr/otp), then hands off to the code-entry screen.
 export function TelebirrPage() {
   const navigate = useNavigate();
   const { buryMeUser, refetch } = useAuth();

@@ -7,7 +7,6 @@ const obligationPath = (obligationId: string) => `/obligations/${encodeURICompon
 export const listPayments = (obligationId: string) =>
   apiClient.get<Schemas["Payment"][]>(`${obligationPath(obligationId)}/payments`);
 
-// Opens the payer's Chapa checkout; the returned Payment carries `checkout_url`.
 export const initiateChapaPayment = (
   obligationId: string,
   body: Schemas["InitiateChapaPaymentInput"] = {},

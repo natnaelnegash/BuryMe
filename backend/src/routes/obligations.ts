@@ -33,12 +33,9 @@ obligationsRouter.use(requireAuth);
 const WITH_PARTIES = {
   borrower: true,
   lender: true,
-  // Only the expense id is needed — the serializer reads through this row
-  // so `originating_expense_id` names the expense, not the share row.
   originatingExpense: { select: { expenseId: true } },
 } as const;
 
-// Only a party to the obligation may see or act on it.
 async function findObligationForUser(obligationId: string, uid: string) {
   const obligation = await prisma.obligation.findFirst({
     where: { id: obligationId, OR: [{ borrowerId: uid }, { lenderId: uid }] },
@@ -50,7 +47,6 @@ async function findObligationForUser(obligationId: string, uid: string) {
   return obligation;
 }
 
-// GET /obligations
 obligationsRouter.get("/", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -61,9 +57,6 @@ obligationsRouter.get("/", async (req, res, next) => {
     else if (role === "lender") where.lenderId = uid;
     else where.OR = [{ borrowerId: uid }, { lenderId: uid }];
     if (status) where.status = { in: status.split(",") };
-    // Group-expense obligations are surfaced through their expense, so the
-    // personal list excludes them rather than repeating each share as its
-    // own row.
     if (origin === "personal") where.originatingExpenseId = null;
     else if (origin === "group") where.originatingExpenseId = { not: null };
 
@@ -87,7 +80,6 @@ obligationsRouter.get("/", async (req, res, next) => {
   }
 });
 
-// GET /obligations/:obligationId
 obligationsRouter.get("/:obligationId", async (req, res, next) => {
   try {
     const obligation = await findObligationForUser(req.params.obligationId, req.auth!.uid);
@@ -97,10 +89,6 @@ obligationsRouter.get("/:obligationId", async (req, res, next) => {
   }
 });
 
-// POST /obligations/:obligationId/repayment-requests — convenience wrapper,
-// equivalent to POST /requests with request_type: Repayment and
-// obligation_id pre-filled. Same Lump-Sum-only, overdue-only rules as the
-// main endpoint (see routes/requests.ts).
 obligationsRouter.post("/:obligationId/repayment-requests", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -114,20 +102,12 @@ obligationsRouter.post("/:obligationId/repayment-requests", async (req, res, nex
   }
 });
 
-// POST /obligations/:obligationId/disburse — contract: disburseObligation.
-// First hop of a Through-App disbursement: the *lender* pays the principal
-// into BuryMe's merchant balance via a Chapa checkout. The checkout webhook
-// then starts the transfer to the borrower (domain/chapaPayments.ts), and the
-// transfer webhook flips the obligation to Active. BuryMe never fronts the
-// money — the obligation stays Pending Disbursement until both hops land.
 obligationsRouter.post("/:obligationId/disburse", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
     const obligation = await findObligationForUser(req.params.obligationId, uid);
     const target = await resolveTarget(obligation, "Disbursement", null);
     await assertPayable(obligation, target, uid);
-    // Checked up front so the lender doesn't pay in for a transfer that
-    // can't complete; re-checked by the transfer hop itself.
     await assertRecipientVerified(obligation.borrower);
     const payment = await createChapaPayment(obligation, target);
     res.status(201).json(toPaymentResponse(payment));
@@ -136,7 +116,6 @@ obligationsRouter.post("/:obligationId/disburse", async (req, res, next) => {
   }
 });
 
-// GET /obligations/:obligationId/payments — contract: listPayments.
 obligationsRouter.get("/:obligationId/payments", async (req, res, next) => {
   try {
     const obligation = await findObligationForUser(req.params.obligationId, req.auth!.uid);
@@ -151,10 +130,6 @@ obligationsRouter.get("/:obligationId/payments", async (req, res, next) => {
   }
 });
 
-// POST /obligations/:obligationId/payments/chapa — contract:
-// initiateChapaPayment. A Repayment: the borrower pays the outstanding
-// balance into a Chapa checkout; the webhooks transfer it to the lender and
-// settle the obligation. (A Disbursement here is the same as /disburse.)
 obligationsRouter.post("/:obligationId/payments/chapa", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -172,10 +147,6 @@ obligationsRouter.post("/:obligationId/payments/chapa", async (req, res, next) =
   }
 });
 
-// POST /obligations/:obligationId/payments/external — contract:
-// recordExternalPayment. Either party records money that moved outside the
-// platform; it sits Pending Acknowledgement until the counterparty confirms
-// or disputes it (routes/payments.ts). Amount is system-set (§12.2.4).
 obligationsRouter.post("/:obligationId/payments/external", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -184,9 +155,6 @@ obligationsRouter.post("/:obligationId/payments/external", async (req, res, next
 
     const direction = body.payment_direction;
     const { payerId, recipientId } = partiesFor(obligation, direction);
-    // Either side may record, but the payment is always from payer to
-    // recipient as the direction dictates — so the rules are checked against
-    // the payer, not the caller.
     const target = await resolveTarget(obligation, direction, body.installment_id);
     await assertPayable(obligation, target, payerId);
 
@@ -227,7 +195,6 @@ obligationsRouter.post("/:obligationId/payments/external", async (req, res, next
       include: WITH_PAYMENT_PARTIES,
     });
 
-    // PAY-03 to the party who now has to confirm or dispute it.
     const otherPartyId = payment.payerId === uid ? payment.recipientId : payment.payerId;
     const recorder = payment.payerId === uid ? payment.payer : payment.recipient;
     void notify({
@@ -247,8 +214,6 @@ obligationsRouter.post("/:obligationId/payments/external", async (req, res, next
   }
 });
 
-// GET /obligations/:obligationId/schedule — contract: getSchedule. 404 for
-// Lump Sum; backfills pre-Slice-6 Installments obligations on first read.
 obligationsRouter.get("/:obligationId/schedule", async (req, res, next) => {
   try {
     const obligation = await findObligationForUser(req.params.obligationId, req.auth!.uid);

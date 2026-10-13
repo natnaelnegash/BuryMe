@@ -23,9 +23,6 @@ export const usersRouter = Router();
 
 usersRouter.use(requireAuth);
 
-// GET /users/search — contract: searchUsers. Every persisted User is
-// already "Verified" by construction (§8.5 — no unverified BuryMe profile
-// exists), so no extra status filter is needed beyond matching the query.
 usersRouter.get("/search", async (req, res, next) => {
   try {
     const { q, limit } = parseBody(searchUsersQuerySchema, req.query);
@@ -44,7 +41,6 @@ usersRouter.get("/search", async (req, res, next) => {
   }
 });
 
-// PATCH /users/me — contract: updateProfile.
 usersRouter.patch("/me", async (req, res, next) => {
   try {
     const body = parseBody(updateProfileRequestSchema, req.body);
@@ -64,10 +60,6 @@ usersRouter.patch("/me", async (req, res, next) => {
   }
 });
 
-// GET /users/me/telebirr — contract: getTelebirr. The contract always
-// returns a TelebirrAccount object; a user who has never gone through
-// verification has no row yet, so one is lazily created (Unverified, no
-// number) on first access rather than requiring a contract change.
 usersRouter.get("/me/telebirr", async (req, res, next) => {
   try {
     const account = await prisma.telebirrAccount.upsert({
@@ -81,10 +73,6 @@ usersRouter.get("/me/telebirr", async (req, res, next) => {
   }
 });
 
-// POST /users/me/telebirr — contract: verifyTelebirr. Saves the number and
-// resets status to Unverified (§7.1.6); any in-flight OTP challenge is
-// dropped since it was issued for the old number. Verification proper is
-// the /otp + /verify pair below.
 usersRouter.post("/me/telebirr", async (req, res, next) => {
   try {
     const body = parseBody(verifyTelebirrRequestSchema, req.body);
@@ -115,7 +103,6 @@ async function findOwnTelebirrAccount(uid: string) {
   return account;
 }
 
-// POST /users/me/telebirr/otp — contract: sendTelebirrOtp.
 usersRouter.post("/me/telebirr/otp", async (req, res, next) => {
   try {
     const account = await findOwnTelebirrAccount(req.auth!.uid);
@@ -129,16 +116,12 @@ usersRouter.post("/me/telebirr/otp", async (req, res, next) => {
   }
 });
 
-// POST /users/me/telebirr/verify — contract: confirmTelebirrOtp.
 usersRouter.post("/me/telebirr/verify", async (req, res, next) => {
   try {
     const body = parseBody(confirmTelebirrOtpRequestSchema, req.body);
     const account = await findOwnTelebirrAccount(req.auth!.uid);
     const verified = await confirmChallenge(account, body.code);
 
-    // TB-02. The catalog navigates to whatever prompted the verification;
-    // with no way to know which that was, the account itself is the
-    // reference and the client lands on the Telebirr screen.
     void notify({
       userId: req.auth!.uid,
       type: "TB-02",
@@ -152,10 +135,7 @@ usersRouter.post("/me/telebirr/verify", async (req, res, next) => {
   }
 });
 
-// GET /users/{userId} — contract: getUser. Registered last: it's a
-// single-segment catch-all and must not shadow the more specific routes
-// above (even though none of them actually collide, since /me/telebirr
-// has two segments).
+// Single-segment catch-all — must stay below the more specific routes.
 usersRouter.get("/:userId", async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.params.userId } });

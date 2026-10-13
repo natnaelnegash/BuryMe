@@ -7,9 +7,6 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     user: { findMany: vi.fn(), findUnique: vi.fn() },
-    // Notifications are raised as a side effect of most of these routes.
-    // Mocked with a resolved row so the emit path runs to completion
-    // instead of failing silently inside notify()'s catch.
     notification: {
       create: vi.fn().mockResolvedValue({
         id: "ntf-1",
@@ -53,8 +50,6 @@ const payer = {
 const helen = { ...payer, id: "helen-1", displayName: "Helen Girma" };
 const yonas = { ...payer, id: "yonas-1", displayName: "Yonas Alemu" };
 
-// A 2,100 bill split three ways: two participants at 700 plus the payer's
-// own 700, which must never spawn an obligation.
 const validBody = {
   total_amount: { amount: 2100, currency: "ETB" },
   description: "Dinner at Yod Abyssinia",
@@ -108,7 +103,6 @@ beforeEach(() => {
       : ({ uid: "outsider-1", phone_number: "+251900000009" } as never),
   );
   vi.mocked(prisma.user.findMany).mockResolvedValue([helen, yonas] as never);
-  // Run the transaction callback against the same mocked client.
   vi.mocked(prisma.$transaction).mockImplementation((async (fn: (tx: unknown) => unknown) =>
     fn(prisma)) as never);
   vi.mocked(prisma.groupExpense.create).mockResolvedValue({
@@ -213,8 +207,6 @@ describe("POST /group-expenses", () => {
       ],
     });
 
-    // Two participants → exactly two obligations; the payer's own share
-    // creates none (§8.12).
     expect(prisma.obligation.create).toHaveBeenCalledTimes(2);
     const first = vi.mocked(prisma.obligation.create).mock.calls[0]![0] as {
       data: Record<string, unknown>;
@@ -232,8 +224,6 @@ describe("POST /group-expenses", () => {
       .mock.calls.map((c) => (c[0] as { data: { borrowerId: string } }).data.borrowerId);
     expect(borrowers).not.toContain(payer.id);
 
-    // GE-01 to each participant and nobody else — the payer has no
-    // obligation of their own, so they get no notification either.
     await vi.waitFor(() =>
       expect(vi.mocked(prisma.notification.create).mock.calls.length).toBeGreaterThanOrEqual(2),
     );
@@ -268,8 +258,6 @@ describe("GET /group-expenses", () => {
 });
 
 describe("outstanding_total", () => {
-  // The payer is owed every participant's remaining share; their own share
-  // is never an obligation, so it never appears here.
   it("sums every participant's remaining share for the payer", async () => {
     vi.mocked(prisma.groupExpense.findFirst).mockResolvedValue(storedExpense() as never);
     const res = await request(app).get("/api/v1/group-expenses/exp-1").set(PAYER_AUTH);
@@ -277,7 +265,6 @@ describe("outstanding_total", () => {
     expect(res.body.outstanding_total).toEqual({ amount: 950, currency: "ETB" });
   });
 
-  // A participant sees only what they still owe, not the whole bill.
   it("reports only their own remaining share for a participant", async () => {
     vi.mocked(auth.verifyIdToken).mockResolvedValue({
       uid: yonas.id,

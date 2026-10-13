@@ -9,9 +9,6 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { useUpdateProfile } from "../../hooks/useUsers.js";
 import styles from "./ProfileEditPage.module.css";
 
-// Figma: Screen — Profile Edit (38:1751). Same column/card shape as Profile
-// and Telebirr Verification, with the one editable field the contract's
-// UpdateProfileRequest exposes.
 export function ProfileEditPage() {
   const navigate = useNavigate();
   const { buryMeUser, refetch } = useAuth();

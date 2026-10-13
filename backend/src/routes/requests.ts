@@ -24,9 +24,6 @@ requestsRouter.use(requireAuth);
 
 const WITH_USERS = { initiatingUser: true, receivingUser: true } as const;
 
-// Only a party to the request may see or act on it — a non-party gets 404,
-// matching the contract's NotFound description ("does not exist or is not
-// accessible to this user").
 async function findRequestForUser(requestId: string, uid: string) {
   const request = await prisma.request.findFirst({
     where: { id: requestId, OR: [{ initiatingUserId: uid }, { receivingUserId: uid }] },
@@ -38,14 +35,6 @@ async function findRequestForUser(requestId: string, uid: string) {
   return request;
 }
 
-// Merges a request's original proposed terms with an (optional) counter
-// proposal — counter fields override, everything else falls back to the
-// original. Used both to validate a counter at submission time and to
-// determine the final terms an Obligation is created from at acceptance.
-// Deliberately looser than CounterProposalInput's full shape — only the
-// fields mergeProposedTerms actually reads, so it accepts whatever
-// `parseBody`'s generic inference produces without fighting subtle type
-// mismatches against a separately-derived `z.infer`.
 interface CounterFields {
   amount?: { amount: number } | undefined;
   proposed_repayment_type?: ("Lump Sum" | "Installments") | undefined;
@@ -65,7 +54,6 @@ function mergeProposedTerms(request: RequestModel, counter?: CounterFields | nul
   };
 }
 
-// GET /requests — list requests involving the current user.
 requestsRouter.get("/", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -101,7 +89,6 @@ requestsRouter.get("/", async (req, res, next) => {
   }
 });
 
-// POST /requests — create a Borrow, Lend, or Repayment request.
 requestsRouter.post("/", async (req, res, next) => {
   try {
     const body = parseBody(createRequestInputSchema, req.body);
@@ -123,7 +110,6 @@ requestsRouter.post("/", async (req, res, next) => {
       return;
     }
 
-    // Borrow or Lend.
     if (body.recipient_user_id === uid) {
       throw new ApiError(
         "VALIDATION_ERROR",
@@ -187,9 +173,6 @@ requestsRouter.post("/", async (req, res, next) => {
       include: WITH_USERS,
     });
 
-    // §13.2: BR-01 to the lender, LR-01 to the borrower. Repayment requests
-    // returned above and raise RR-01 from domain/repayment.ts, which is the one
-    // place both entry points go through.
     void notify({
       userId: request.receivingUserId,
       type: request.requestType === "Lend" ? "LR-01" : "BR-01",
@@ -203,7 +186,6 @@ requestsRouter.post("/", async (req, res, next) => {
   }
 });
 
-// GET /requests/:requestId
 requestsRouter.get("/:requestId", async (req, res, next) => {
   try {
     const request = await findRequestForUser(req.params.requestId, req.auth!.uid);
@@ -213,7 +195,6 @@ requestsRouter.get("/:requestId", async (req, res, next) => {
   }
 });
 
-// POST /requests/:requestId/counter — the single allowed counter-proposal.
 requestsRouter.post("/:requestId/counter", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -233,8 +214,6 @@ requestsRouter.post("/:requestId/counter", async (req, res, next) => {
       include: WITH_USERS,
     });
 
-    // The counter always travels back to whoever opened the request:
-    // BR-04 on a Borrow, LR-02 on a lending record.
     void notify({
       userId: updated.initiatingUserId,
       type: updated.requestType === "Lend" ? "LR-02" : "BR-04",
@@ -248,7 +227,6 @@ requestsRouter.post("/:requestId/counter", async (req, res, next) => {
   }
 });
 
-// POST /requests/:requestId/accept
 requestsRouter.post("/:requestId/accept", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -292,7 +270,6 @@ requestsRouter.post("/:requestId/accept", async (req, res, next) => {
       disbursementMethod = request.disbursementMethod!;
     }
 
-    // Borrow: initiator is the borrower. Lend: initiator is the lender.
     const borrowerId =
       request.requestType === "Borrow" ? request.initiatingUserId : request.receivingUserId;
     const lenderId =
@@ -319,8 +296,6 @@ requestsRouter.post("/:requestId/accept", async (req, res, next) => {
           disbursementMethod,
           dueDate: new Date(terms.dueDate),
           status: isActive ? "Active" : "PendingDisbursement",
-          // Installments: materialise the agreed schedule in the same
-          // transaction — fixed from here on (§6.3.2).
           ...(terms.repaymentType === "Installments" && terms.schedule
             ? { schedule: scheduleCreateInput(terms.schedule) }
             : {}),
@@ -328,12 +303,6 @@ requestsRouter.post("/:requestId/accept", async (req, res, next) => {
       }),
     ]);
 
-    // §13.2 on acceptance. A Borrow closes with BR-02 (or BR-05 when it was
-    // the counter-proposal being accepted). A lending record is LR-03 to
-    // both parties when the money already changed hands, or LR-04 nudging
-    // the lender to disburse when it hasn't.
-    // The agreed figure, not a field read back off the created row — the
-    // obligation write returns only what the caller selected.
     const amount = etb(terms.amount);
     if (updatedRequest.requestType === "Borrow") {
       void notify({
@@ -375,9 +344,6 @@ requestsRouter.post("/:requestId/accept", async (req, res, next) => {
   }
 });
 
-// POST /requests/:requestId/decline — same actor-gating as accept (the
-// contract doesn't restate it explicitly here, but decline/accept are the
-// two responses to whoever currently holds the proposal).
 requestsRouter.post("/:requestId/decline", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -395,9 +361,6 @@ requestsRouter.post("/:requestId/decline", async (req, res, next) => {
       include: WITH_USERS,
     });
 
-    // Declining a counter-proposal (BR-06) is a different event from
-    // declining the original request (BR-03 / LR-06), and travels the other
-    // way. LR-06 has no reference — the catalog sends it to the Dashboard.
     const declinedByInitiator = wasCountered;
     void notify({
       userId: declinedByInitiator ? updated.receivingUserId : updated.initiatingUserId,
@@ -417,7 +380,6 @@ requestsRouter.post("/:requestId/decline", async (req, res, next) => {
   }
 });
 
-// POST /requests/:requestId/cancel — initiator only, while Pending.
 requestsRouter.post("/:requestId/cancel", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;

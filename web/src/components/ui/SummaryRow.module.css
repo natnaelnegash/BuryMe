@@ -1,7 +1,3 @@
-/* Figma: component set "Summary Row" (29:993) — Divider: On/Off. A
- * label/value pair, optionally with a trailing action, that stacks with
- * its siblings inside a card. */
-
 .row {
   display: flex;
   align-items: center;

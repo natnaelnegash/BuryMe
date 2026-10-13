@@ -15,9 +15,6 @@ export const WITH_SETTLEMENT_PARTIES = {
   netRecipient: true,
 } as const;
 
-// `SettlementResponse` needs no enum map: every member (Pending / Accepted
-// / Declined) is already identical to the contract string, so it passes
-// through the same way RequestStatus does.
 export function toSettlementSuggestionResponse(
   suggestion: SettlementWithParties,
 ): Schemas["SettlementSuggestion"] {

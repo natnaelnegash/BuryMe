@@ -1,7 +1,3 @@
-/* Figma: Dashboard — Web (10:3). The body's 36/120/72 padding comes from
- * AppShell; the Dashboard sets its own 24px stack gap (the shell's default
- * is 20px). */
-
 .page {
   display: flex;
   flex-direction: column;
@@ -24,7 +20,6 @@
   color: var(--color-text-gray);
 }
 
-/* ── Balance bar ──────────────────────────────────────────── */
 .balanceCard {
   display: flex;
   flex-direction: column;
@@ -72,8 +67,6 @@
   color: var(--color-amber);
 }
 
-/* The net figure sits between the two at a slightly smaller weight — 22px
- * Semi Bold, which the design uses only here. */
 .netFigure {
   font: 600 22px/normal var(--font-family);
   color: var(--color-text-dark);
@@ -95,7 +88,6 @@
   background: var(--color-amber);
 }
 
-/* ── Section headers ──────────────────────────────────────── */
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -114,12 +106,10 @@
 }
 
 .seeAll {
-  /* 14px Medium — used only for this control. */
   font: 500 14px/normal var(--font-family);
   color: var(--color-teal);
 }
 
-/* ── Lists ────────────────────────────────────────────────── */
 .actionList {
   display: flex;
   flex-direction: column;

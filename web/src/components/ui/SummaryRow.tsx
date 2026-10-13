@@ -5,11 +5,8 @@ import styles from "./SummaryRow.module.css";
 interface SummaryRowProps {
   label: string;
   value: ReactNode;
-  /** Colour the value when it carries state (e.g. "Verified" in teal). */
   tone?: "default" | "teal" | "amber" | "gray";
-  /** Figma: Divider=Off for the last row in a stack. */
   divider?: boolean;
-  /** A trailing control, e.g. a small "Change number" button. */
   action?: ReactNode;
 }
 

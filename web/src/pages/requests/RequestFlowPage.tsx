@@ -17,19 +17,6 @@ import { formatDate, todayIso } from "../../lib/dates.js";
 import { formatMoney } from "../../lib/money.js";
 import styles from "./RequestFlowPage.module.css";
 
-// Figma: Flow — Borrow Request · Steps 1–3 (15:2, 15:79, 15:146) and
-// Flow — Lending Record · Steps 1–4 (15:208, 15:286, 15:344, 15:409). The
-// two flows share every screen except the Lend-only "Disbursement Method"
-// step, so one component drives both from a step list.
-//
-// Deviations from the frames, all forced by the contract:
-//  - a Due date field on the terms step (`proposed_due_date` is required,
-//    and the review step already shows it);
-//  - "Reason" is required, not optional (`purpose` minLength 3);
-//  - the Lend review says the request will be *Pending* — POST /requests
-//    creates a Request the borrower must accept, nothing goes Active on
-//    create.
-
 type Kind = "borrow" | "lend";
 type Step = "recipient" | "disbursement" | "terms" | "review";
 type RepaymentType = Schemas["RepaymentType"];
@@ -75,7 +62,6 @@ function Flow({ kind }: { kind: Kind }) {
   const [stepIndex, setStepIndex] = useState(0);
   const step = steps[stepIndex] as Step;
 
-  // Step 1 — recipient.
   const [query, setQuery] = useState("");
   const [recipient, setRecipient] = useState<Schemas["UserSummary"] | null>(null);
   const { data: results, isSearching: searching, searchNow, term } = useSearchUsersQuery(query);
@@ -84,10 +70,8 @@ function Flow({ kind }: { kind: Kind }) {
     if (preselected.data && !recipient) setRecipient(preselected.data);
   }, [preselected.data, recipient]);
 
-  // Step 2 (Lend only) — disbursement.
   const [disbursement, setDisbursement] = useState<DisbursementMethod>("Already Given");
 
-  // Terms.
   const [amount, setAmount] = useState("");
   const [repaymentType, setRepaymentType] = useState<RepaymentType>("Lump Sum");
   const [purpose, setPurpose] = useState("");
@@ -121,8 +105,6 @@ function Flow({ kind }: { kind: Kind }) {
     next();
   }
 
-  // Light client-side checks so the user isn't sent to review with an
-  // obviously broken form — the server's validation stays authoritative.
   function handleTermsContinue(e: FormEvent) {
     e.preventDefault();
     if (!(amountNumber > 0)) return setStepError("Enter an amount greater than zero.");
@@ -221,7 +203,6 @@ function Flow({ kind }: { kind: Kind }) {
         <form
           className={styles.stack}
           onSubmit={(e) => {
-            // Results already follow typing; Enter just skips the debounce.
             e.preventDefault();
             searchNow();
           }}

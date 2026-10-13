@@ -19,11 +19,6 @@ import styles from "./RegisterPage.module.css";
 
 const RESEND_SECONDS = 60;
 
-// Two visible steps, matching the Figma flow: the "Auth — Register" frame
-// collects name/phone/password together, then "Auth — OTP Verification"
-// confirms the number. Firebase dictates the order underneath — the phone
-// sign-in must complete before a password credential can be linked to it —
-// so the password is held until the code is confirmed.
 type Step = "details" | "otp";
 
 export function RegisterPage() {
@@ -87,12 +82,10 @@ export function RegisterPage() {
       if (!confirmationRef.current) throw new Error("No pending verification.");
       await confirmationRef.current.confirm(otp);
 
-      // The phone is verified and the user is signed in — now link a password
-      // credential under the synthetic email derived from that number, so
-      // future logins can use phone + password (see api/firebase.ts).
       const currentUser = auth.currentUser;
       if (!currentUser) throw new Error("Not signed in.");
       const credential = EmailAuthProvider.credential(phoneToSyntheticEmail(phoneNumber), password);
+      // Sign-in must complete before a password credential can be linked.
       await linkWithCredential(currentUser, credential);
 
       await register({ display_name: displayName });

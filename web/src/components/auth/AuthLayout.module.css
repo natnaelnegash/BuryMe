@@ -1,9 +1,3 @@
-/*
- * The shell shared by every "Auth — *" frame in Figma (37:1195 Register,
- * 37:1252 Login, 37:1282 OTP Verification). All three are identical apart
- * from the card's contents, so the chrome lives here once.
- */
-
 .page {
   min-height: 100%;
   background: var(--color-bg);
@@ -17,7 +11,6 @@
   gap: 24px;
 }
 
-/* Figma: "Host" — a fixed 460px column, everything centred within it. */
 .host {
   display: flex;
   flex-direction: column;

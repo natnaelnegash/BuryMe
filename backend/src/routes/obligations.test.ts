@@ -7,11 +7,7 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     obligation: { findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
-    // Read by the push path when a notification fires.
     user: { findUnique: vi.fn() },
-    // Notifications are raised as a side effect of most of these routes.
-    // Mocked with a resolved row so the emit path runs to completion
-    // instead of failing silently inside notify()'s catch.
     notification: {
       create: vi.fn().mockResolvedValue({
         id: "ntf-1",
@@ -115,8 +111,6 @@ describe("GET /obligations/:id", () => {
     expect(res.body.originating_expense_id).toBeNull();
   });
 
-  // The FK points at the participant's share row; the contract field names
-  // the expense, so the serializer has to read through it.
   it("reports the expense id, not the share row id, for a spawned obligation", async () => {
     vi.mocked(prisma.obligation.findFirst).mockResolvedValue(
       baseObligation({
@@ -131,9 +125,6 @@ describe("GET /obligations/:id", () => {
 });
 
 describe("GET /obligations", () => {
-  // Group-expense shares are surfaced through their expense, so the
-  // personal list must exclude them at the query rather than in the client
-  // (filtering a page client-side would break the cursor).
   it("excludes group-expense obligations when origin=personal", async () => {
     vi.mocked(prisma.obligation.findMany).mockResolvedValue([baseObligation()] as never);
     const res = await request(app).get("/api/v1/obligations?origin=personal").set(LENDER_AUTH);
@@ -324,7 +315,6 @@ describe("POST /obligations/:id/disburse", () => {
       recipient: { user_id: borrower.id },
     });
 
-    // The lender pays in; nothing is transferred yet.
     expect(chapa.initiateCheckout).toHaveBeenCalledWith(
       expect.objectContaining({
         amount: 1000,
@@ -473,7 +463,6 @@ describe("POST /obligations/:id/payments/chapa (repayment)", () => {
       recipient: { user_id: lender.id },
       checkout_url: "https://checkout.chapa.co/r",
     });
-    // Amount is the outstanding balance (500), never the principal.
     const { data } = vi.mocked(prisma.payment.create).mock.calls[0]![0] as {
       data: { amount: { toNumber(): number }; paymentDirection: string };
     };
@@ -556,8 +545,6 @@ describe("POST /obligations/:id/payments/external", () => {
     );
   });
 });
-
-// ── Schedules (Slice 6) ─────────────────────────────────────────────
 
 function scheduleWith(installments: Record<string, unknown>[]) {
   return {
@@ -723,7 +710,6 @@ describe("Installments payments", () => {
     };
     expect(data.amount.toNumber()).toBe(500);
     expect(data.installmentId).toBe("inst-1");
-    // The in-flight check is per installment.
     expect(prisma.payment.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ installmentId: "inst-1" }) }),
     );

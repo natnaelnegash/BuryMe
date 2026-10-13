@@ -34,9 +34,6 @@ export function DashboardPage() {
   const obligations = obligationPage?.data ?? [];
   const requests = requestPage?.data ?? [];
 
-  // Settlements surface here (§8.14): suggestions waiting on the viewer,
-  // then pairs they could propose. A pair that already has a live
-  // suggestion is only offered once — as the response.
   const awaitingMe = suggestions.filter((s) => {
     if (s.status !== "Pending") return false;
     return s.user_a.user_id === uid
@@ -53,7 +50,6 @@ export function DashboardPage() {
   );
   const settlementCount = awaitingMe.length + readyToSettle.length;
 
-  // Outstanding balances split by which side of the obligation you're on.
   const owedToYou = obligations
     .filter((o) => o.lender.user_id === uid && o.status !== "Settled")
     .reduce((sum, o) => sum + o.outstanding_balance.amount, 0);

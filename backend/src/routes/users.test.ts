@@ -7,9 +7,6 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     user: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
-    // Notifications are raised as a side effect of most of these routes.
-    // Mocked with a resolved row so the emit path runs to completion
-    // instead of failing silently inside notify()'s catch.
     notification: {
       create: vi.fn().mockResolvedValue({
         id: "ntf-1",
@@ -156,8 +153,6 @@ describe("POST /users/me/telebirr", () => {
     });
   });
 });
-
-// ── Telebirr OTP (POST /users/me/telebirr/otp + /verify) ──────────────
 
 const { createHash } = await import("node:crypto");
 const { otpPepper } = await import("../config/otp.js");

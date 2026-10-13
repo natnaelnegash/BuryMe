@@ -1,12 +1,9 @@
-/* Figma: Flow — Group Expense · Step 1 (27:360) and Step 2 (27:440). */
-
 .stack {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* "Include Me Toggle" (43:1935): field-bg card, 14px padding, radius 12. */
 .includeMe {
   display: flex;
   align-items: center;
@@ -39,7 +36,6 @@
   color: var(--color-text-gray);
 }
 
-/* "Two Up" (77:1182). */
 .twoUp {
   display: flex;
   gap: 16px;
@@ -55,8 +51,6 @@
   color: var(--color-text-gray);
 }
 
-/* "Sum" (27:507): one row per person, 12px vertical, 1px divider, with a
- * 90×40 amount input on the right. */
 .shares {
   display: flex;
   flex-direction: column;
@@ -92,7 +86,6 @@
   border-color: var(--color-teal);
 }
 
-/* "Btn Row" — 6px top padding, two FILL buttons 12 apart. */
 .btnRow {
   display: flex;
   gap: 12px;

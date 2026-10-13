@@ -10,12 +10,6 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { useConfirmTelebirrOtp, useSendTelebirrOtp } from "../../hooks/useUsers.js";
 import styles from "./TelebirrVerifyPage.module.css";
 
-// Figma: Screen — Telebirr Verification · Code (66:855). Same column as the
-// number screen; the card holds the OTP row, the resend countdown, a note,
-// and Verify / Cancel. The countdown is driven by the challenge's
-// `resend_available_at` (passed via router state from TelebirrPage, or from
-// a resend here) so it matches the backend's 60-second gate exactly.
-
 interface LocationState {
   resendAvailableAt?: string;
 }
@@ -44,7 +38,6 @@ export function TelebirrVerifyPage() {
 
   if (!buryMeUser) return null;
   const telebirr = buryMeUser.telebirr;
-  // Nothing to verify without a saved, unverified number.
   if (!telebirr?.telebirr_number) return <Navigate to="/profile/telebirr" replace />;
   if (telebirr.verification_status === "Verified") return <Navigate to="/profile" replace />;
 

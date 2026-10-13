@@ -7,9 +7,6 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     user: { findUnique: vi.fn() },
-    // Notifications are raised as a side effect of most of these routes.
-    // Mocked with a resolved row so the emit path runs to completion
-    // instead of failing silently inside notify()'s catch.
     notification: {
       create: vi.fn().mockResolvedValue({
         id: "ntf-1",
@@ -53,8 +50,6 @@ const alem = {
 };
 const dawit = { ...alem, id: "dawit-1", displayName: "Dawit Mekonnen" };
 
-// Alem owes Dawit 450; Dawit owes Alem 1,200. Netting leaves Dawit paying
-// Alem 750 — the numbers on the Figma frame.
 function obligation(overrides: Record<string, unknown> = {}) {
   return {
     id: "obl-a",
@@ -114,7 +109,6 @@ beforeEach(() => {
   });
   vi.mocked(prisma.user.findUnique).mockResolvedValue(dawit as never);
   vi.mocked(prisma.settlementSuggestion.findFirst).mockResolvedValue(null);
-  // One open obligation in each direction.
   vi.mocked(prisma.obligation.findMany).mockImplementation((async (args: {
     where: { borrowerId: string };
   }) => (args.where.borrowerId === alem.id ? [alemOwes] : [dawitOwes])) as never);
@@ -142,7 +136,6 @@ describe("POST /settlements/suggestions", () => {
       status: "Pending",
     });
 
-    // user_a is the initiator, so obligation_a is the one they borrow on.
     const data = vi.mocked(prisma.settlementSuggestion.create).mock.calls[0]![0]!.data as Record<
       string,
       unknown
@@ -188,9 +181,6 @@ describe("POST /settlements/suggestions", () => {
     expect(prisma.settlementSuggestion.create).not.toHaveBeenCalled();
   });
 
-  // Settling an installment plan would strand Pending installments under a
-  // Settled obligation, so it's refused until the contract has a way to say
-  // "cancelled".
   it("refuses an installment obligation", async () => {
     vi.mocked(prisma.obligation.findMany).mockImplementation((async (args: {
       where: { borrowerId: string };
@@ -229,7 +219,6 @@ describe("POST /settlements/suggestions", () => {
 
 describe("POST /settlements/suggestions/:id/accept", () => {
   it("settles nothing while the other party hasn't answered", async () => {
-    // A suggestion neither party has accepted yet.
     vi.mocked(prisma.settlementSuggestion.findFirst).mockResolvedValue(
       storedSuggestion({ userAResponse: "Pending" }) as never,
     );
@@ -258,8 +247,6 @@ describe("POST /settlements/suggestions/:id/accept", () => {
     expect(res.body.status).toBe("Accepted");
     expect(res.body.resolved_at).not.toBeNull();
 
-    // Both obligations zeroed and Settled — the same invariant a confirmed
-    // final payment produces.
     expect(prisma.obligation.update).toHaveBeenCalledTimes(2);
     const ids = vi
       .mocked(prisma.obligation.update)
@@ -272,9 +259,6 @@ describe("POST /settlements/suggestions/:id/accept", () => {
       expect((data.outstandingBalance as InstanceType<typeof Prisma.Decimal>).toNumber()).toBe(0);
     }
 
-    // BSS-03 to both parties. Each is told the OTHER person's name and
-    // pointed at their own obligation — easy to get backwards, so both
-    // directions are pinned here.
     await vi.waitFor(() =>
       expect(vi.mocked(prisma.notification.create).mock.calls.length).toBeGreaterThanOrEqual(2),
     );

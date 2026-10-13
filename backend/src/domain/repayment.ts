@@ -4,12 +4,6 @@ import { ApiError } from "../middleware/errors.js";
 import { etb, notify } from "./notifications.js";
 import { loadSchedule } from "./schedule.js";
 
-// Shared by POST /requests (request_type: Repayment) and the
-// /obligations/{id}/repayment-requests convenience wrapper — same rules,
-// same shape, one place to keep them in lockstep. A repayment request is a
-// deliberate escalation restricted to what is currently overdue (§6.2.2):
-// the whole balance for Lump Sum, one Overdue installment for Installments.
-
 export interface RepaymentTarget {
   installment: Installment | null;
 }
@@ -87,9 +81,6 @@ export async function createRepaymentRequest(
     include: { initiatingUser: true, receivingUser: true },
   });
 
-  // RR-01 to the borrower. Raised here rather than at either call site so
-  // both entry points behave identically. The catalog opens the obligation,
-  // not the request.
   void notify({
     userId: request.receivingUserId,
     type: "RR-01",

@@ -1,14 +1,9 @@
-/* Figma: Screen — Notification Preferences (66:744 / host 66:774).
- * CenteredLayout supplies the 680 column, back control, head and card
- * shell; these are the card's contents. */
-
 .stack {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* "Pref Row" (66:808): 13px vertical padding, 24 gap, divider below. */
 .row {
   display: flex;
   align-items: center;

@@ -1,5 +1,3 @@
-/* Record External Payment — same card shape as Make Payment (16:31). */
-
 .stack {
   display: flex;
   flex-direction: column;

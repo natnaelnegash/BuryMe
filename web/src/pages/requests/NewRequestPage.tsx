@@ -5,8 +5,6 @@ import { Note } from "../../components/ui/Note.js";
 import { OptionCard } from "../../components/ui/OptionCard.js";
 import styles from "./NewRequestPage.module.css";
 
-// Figma: Screen — New (chooser) (49:2727). Routes into the Lend / Borrow
-// flows; the `?to=` recipient from Search is carried through untouched.
 export function NewRequestPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();

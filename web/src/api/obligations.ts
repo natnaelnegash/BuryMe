@@ -4,7 +4,6 @@ import { apiClient } from "./client.js";
 
 export interface ListObligationsParams {
   role?: "borrower" | "lender";
-  /** `personal` drops group-expense shares, which are listed by expense. */
   origin?: "personal" | "group";
   limit?: number;
 }
@@ -27,7 +26,5 @@ export const requestRepayment = (obligationId: string, body?: Schemas["Repayment
     body ?? {},
   );
 
-// Opens the lender's Chapa checkout for a Through-App disbursement; the
-// returned Payment carries `checkout_url` to redirect to.
 export const disburseObligation = (obligationId: string) =>
   apiClient.post<Schemas["Payment"]>(`/obligations/${encodeURIComponent(obligationId)}/disburse`);

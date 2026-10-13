@@ -1,5 +1,3 @@
-/* Figma: "OTP Row" in Auth — OTP Verification (37:1307). */
-
 .row {
   display: flex;
   align-items: center;
@@ -17,8 +15,6 @@
   text-align: center;
 }
 
-/* A filled box takes the heavier teal border the design uses to show
- * progress through the code. */
 .filled {
   border: 2px solid var(--color-teal);
 }

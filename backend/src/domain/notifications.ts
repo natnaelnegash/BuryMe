@@ -9,20 +9,7 @@ import {
   type NotificationType,
 } from "./notificationCatalog.js";
 
-// Raising a notification (§8.11, §13.2). One call persists the row, pushes
-// it down the recipient's socket and sends an FCM message — in that order,
-// because the feed is the durable record and the other two are best-effort
-// delivery on top of it.
-//
-// Nothing here throws into the caller: a notification failing must never
-// roll back the business action that triggered it. A lender should not lose
-// a confirmed payment because FCM was briefly unreachable.
-
-// The catalog writes every money value as "1,200 ETB", so amounts are
-// formatted once here rather than at each call site. Reads Decimals through
-// `toNumber()` the same way serializers/money.ts does, and never throws:
-// several call sites build their params outside notify()'s error handling,
-// and a missing amount must not take down the request that raised it.
+// Never throws: several call sites build params outside notify()'s catch.
 export function etb(amount: Prisma.Decimal | number | null | undefined): string {
   const value =
     typeof amount === "number"
@@ -37,13 +24,7 @@ export interface NotifyInput {
   userId: string;
   type: NotificationType;
   params: CatalogParams;
-  /** The entity to open; the catalog decides its type. */
   referenceId?: string | null;
-  /**
-   * Timed reminders only (§13.3). The sweep re-evaluates the same rows every
-   * run, so each reminder names the occasion it is for ("RS-04:<id>:3") and
-   * the unique index makes a second send a no-op.
-   */
   dedupeKey?: string;
 }
 
@@ -64,8 +45,6 @@ export async function notify(input: NotifyInput): Promise<void> {
       },
     });
 
-    // Best-effort delivery. `deliveredAt` records the push attempt, not a
-    // read receipt.
     emitToUser(input.userId, "notification:new", {
       notification_id: notification.id,
       notification_type: notification.notificationType,
@@ -85,8 +64,6 @@ export async function notify(input: NotifyInput): Promise<void> {
       });
     }
   } catch (err) {
-    // A duplicate dedupe key means this reminder already went out on an
-    // earlier sweep — expected, not a failure.
     if (isDuplicateKey(err)) return;
     console.error("Notification failed:", err);
   }
@@ -96,11 +73,6 @@ function isDuplicateKey(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
 }
 
-// A confirmed Chapa payment. A disbursement lands as LR-05 to both parties
-// ("funds sent — obligation active"); a repayment as PAY-01 to the payer
-// and PAY-02 to the recipient, both quoting what's left. Reads the rows
-// back after the confirming transaction so the balances it quotes are the
-// post-payment ones.
 export async function notifyChapaConfirmed(paymentId: string): Promise<void> {
   try {
     const payment = await prisma.payment.findUnique({
@@ -143,10 +115,6 @@ export async function notifyChapaConfirmed(paymentId: string): Promise<void> {
   }
 }
 
-// PAY-07: raised when a confirmed payment is the one that clears the
-// balance. Call it immediately after the transaction that might have
-// settled the obligation — it reads the row back and stays quiet unless the
-// status actually reached Settled.
 export async function notifySettledIfCleared(obligationId: string): Promise<void> {
   try {
     const obligation = await prisma.obligation.findUnique({
@@ -172,10 +140,6 @@ export async function notifySettledIfCleared(obligationId: string): Promise<void
   }
 }
 
-// Several catalog events go to both parties with the same copy (LR-03,
-// LR-05, PAY-07, BSS-03, BSS-04, BSS-05). The params differ per recipient
-// though — each sees the *other* party's name — so this takes a resolver
-// rather than one shared params object.
 export async function notifyBoth(
   userIds: [string, string],
   type: NotificationType,

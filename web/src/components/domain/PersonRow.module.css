@@ -1,6 +1,3 @@
-/* Figma: the "Person" rows in User Discovery (38:1578) — also the
- * "Person Row" component set (46:2008) used by the request flows. */
-
 .row {
   display: flex;
   align-items: center;
@@ -17,8 +14,6 @@ button.row {
   cursor: pointer;
 }
 
-/* Selected=True is a 2px teal stroke on a white fill; the inset shadow
- * supplies the second pixel so the row doesn't shift. */
 .row.selected {
   border-color: var(--color-teal);
   box-shadow: inset 0 0 0 1px var(--color-teal);

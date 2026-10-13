@@ -1,6 +1,3 @@
-/* The block sits in the same 592-wide column the design draws it at,
- * centred in the shell's body. */
-
 .page {
   max-width: 592px;
   margin: 0 auto;

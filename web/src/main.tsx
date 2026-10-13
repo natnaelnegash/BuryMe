@@ -7,9 +7,6 @@ import App from "./App.js";
 import { AuthProvider } from "./hooks/useAuth.js";
 import "./styles/global.css";
 
-// One client for the whole app. Defaults are deliberately conservative
-// (no refetch-on-window-focus surprises) until we have real UX requirements
-// driving cache tuning per query.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { refetchOnWindowFocus: false, retry: 1 },

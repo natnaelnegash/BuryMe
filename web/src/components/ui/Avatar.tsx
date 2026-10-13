@@ -7,16 +7,11 @@ interface AvatarBase {
   accent?: AvatarAccent;
 }
 
-/**
- * Either a person — whose initial is derived — or a bare glyph. The Figma
- * component set takes free text in its `Initial` property, which the state
- * blocks (39:1817, 66:1037) override with "+", "🔔", "⇄" and the like; those
- * can't go through `name`, since deriving an initial would split a
- * multi-byte glyph in half.
- */
 type AvatarProps = AvatarBase & ({ name: string; glyph?: never } | { glyph: string; name?: never });
 
 export function Avatar({ name, glyph, size = 44, accent = "teal" }: AvatarProps) {
+  // A glyph is passed through whole — deriving an initial would split a
+  // multi-byte character such as an emoji in half.
   const content = glyph ?? ((name ?? "").trim().charAt(0).toUpperCase() || "?");
   return (
     <span

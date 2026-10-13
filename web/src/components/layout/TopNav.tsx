@@ -4,8 +4,6 @@ import { useAuth } from "../../hooks/useAuth.js";
 import { useUnreadCount } from "../../hooks/useNotifications.js";
 import styles from "./TopNav.module.css";
 
-// Mirrors the Figma component set's `Active` variant axis
-// (Home / Requests / Obligations / Profile / None).
 const NAV_ITEMS = [
   { label: "Home", to: "/" },
   { label: "Requests", to: "/requests" },
@@ -54,7 +52,6 @@ export function TopNav() {
           + &nbsp;New
         </Link>
 
-        {/* The bell opens the feed (37:1443) and carries an unread count. */}
         <Link className={styles.bell} to="/notifications" aria-label="Notifications">
           <span aria-hidden="true">🔔</span>
           {unreadCount > 0 && (

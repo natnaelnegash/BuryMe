@@ -7,9 +7,6 @@ import { etb, notify, notifySettledIfCleared } from "../domain/notifications.js"
 import { confirmedPaymentEffects, WITH_PAYMENT_PARTIES } from "../domain/payments.js";
 import { toPaymentResponse } from "../serializers/payment.js";
 
-// Counterparty confirmation of externally-recorded payments (§6.4.3). Only
-// the party who did NOT record the payment may acknowledge or dispute it,
-// and only while it's Pending Acknowledgement.
 export const paymentsRouter = Router();
 
 paymentsRouter.use(requireAuth);
@@ -42,7 +39,6 @@ async function findPendingExternalForCounterparty(paymentId: string, uid: string
   return payment;
 }
 
-// POST /payments/:paymentId/acknowledge — contract: acknowledgePayment.
 paymentsRouter.post("/:paymentId/acknowledge", async (req, res, next) => {
   try {
     const payment = await findPendingExternalForCounterparty(req.params.paymentId, req.auth!.uid);
@@ -55,8 +51,6 @@ paymentsRouter.post("/:paymentId/acknowledge", async (req, res, next) => {
       ...(await confirmedPaymentEffects(payment, payment.obligation)),
     ]);
 
-    // PAY-04 back to whoever recorded it, then PAY-07 to both parties if
-    // that payment was the one that cleared the balance.
     const acknowledger = payment.payerId === req.auth!.uid ? payment.payer : payment.recipient;
     if (payment.recordedByUserId) {
       void notify({
@@ -74,10 +68,6 @@ paymentsRouter.post("/:paymentId/acknowledge", async (req, res, next) => {
   }
 });
 
-// POST /payments/:paymentId/dispute — contract: disputePayment. The
-// obligation is flagged Disputed alongside the payment — the contract
-// defines that status but no resolution endpoint yet, so it stays there
-// until one exists.
 paymentsRouter.post("/:paymentId/dispute", async (req, res, next) => {
   try {
     const payment = await findPendingExternalForCounterparty(req.params.paymentId, req.auth!.uid);

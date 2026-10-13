@@ -9,8 +9,6 @@ import {
   recordExternalPayment,
 } from "../api/payments.js";
 
-// Every payment mutation touches the obligation's balance/status too, so
-// they invalidate both the payments list and the obligations namespace.
 const PAYMENTS_KEY = ["payments"] as const;
 
 export function usePaymentsQuery(obligationId: string | undefined) {

@@ -4,7 +4,6 @@ import styles from "./Field.module.css";
 
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
-  /** Figma: State = Read-only. */
   readOnlyLook?: boolean;
   error?: string | null;
 }

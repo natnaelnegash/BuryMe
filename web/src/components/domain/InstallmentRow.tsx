@@ -14,14 +14,9 @@ const PILL: Record<Schemas["InstallmentStatus"], PillStatus> = {
 interface InstallmentRowProps {
   index: number;
   installment: Schemas["Installment"];
-  /** Row is the one a payment would target next. */
   highlighted?: boolean;
 }
 
-// One line of a repayment schedule: "Installment N · due date" with the
-// amount and status. Figma has an "Installment Row" component set (46:*)
-// — built from the schedule frame's structure while the plugin was
-// offline; visual pass pending.
 export function InstallmentRow({ index, installment, highlighted = false }: InstallmentRowProps) {
   const paid = installment.status === "Paid";
   return (

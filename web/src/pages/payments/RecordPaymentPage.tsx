@@ -19,15 +19,6 @@ import { formatDate, todayIso } from "../../lib/dates.js";
 import { formatMoney } from "../../lib/money.js";
 import styles from "./RecordPaymentPage.module.css";
 
-// Record a payment that happened outside the platform (§6.4.2). Either party
-// may record it; the direction follows from the obligation's state (a
-// Pending Disbursement obligation gets a Disbursement, an Active one a
-// Repayment) and the amount is system-set. It sits Pending Acknowledgement
-// until the other party confirms or disputes it on the obligation page.
-//
-// Built without a grounded Figma frame (the plugin was offline) — same
-// card shape as Make Payment (16:32); visual pass pending.
-
 type MethodNote = Schemas["ExternalPaymentMethodNote"];
 
 const METHODS: { value: MethodNote; description: string }[] = [

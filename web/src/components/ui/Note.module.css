@@ -1,6 +1,3 @@
-/* Figma: component set "Note" (29:994) — Color: Teal/Amber/Indigo/Gray.
- * Each is a tint-90 wash with the matching solid colour as text. */
-
 .note {
   padding: 12px 14px;
   border-radius: var(--radius-input);

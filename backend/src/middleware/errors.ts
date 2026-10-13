@@ -1,13 +1,10 @@
 import type { Schemas } from "@buryme/shared";
 import type { NextFunction, Request, Response } from "express";
 
-// The contract's ErrorCode enum, generated from contract/openapi.yaml —
-// never invent a code outside this list (CLAUDE.md).
+// Never invent a code outside this list (CLAUDE.md). `ApiError.message` must
+// stay user-safe: no stack traces, DB ids, or raw third-party payloads.
 export type ErrorCode = Schemas["ErrorCode"];
 
-// Thrown by route handlers; caught by `errorHandler` below and rendered as
-// the contract's `Error` envelope. `message` must stay plain-language and
-// user-safe — never a stack trace, DB id, or raw third-party payload (§12.1).
 export class ApiError extends Error {
   constructor(
     public readonly code: ErrorCode,

@@ -26,17 +26,6 @@ import { formatMoney } from "../../lib/money.js";
 import { canCancel, canRespond, requestStatusLabel } from "../../lib/requests.js";
 import styles from "./RequestDetailPage.module.css";
 
-// Figma: Screen — Request Response (16:66), Screen — Counter-Proposal
-// Received (49:2500) and Screen — Negotiate Terms (16:132). One route,
-// `/requests/:id`, picks the view from the request's status and who's
-// looking: the recipient of a Pending request gets Response; the initiator
-// of a Countered one gets Counter-Proposal Received; "Counter" on the
-// Response view switches to Negotiate Terms in place.
-//
-// Contract-driven addition: accepting a *Borrow* request needs the lender's
-// disbursement_method (AcceptRequestInput), which the Response frame doesn't
-// show — it appears here as a radio group above the buttons.
-
 type Request = Schemas["Request"];
 type RepaymentType = Schemas["RepaymentType"];
 type DisbursementMethod = Schemas["DisbursementMethod"];
@@ -91,8 +80,6 @@ export function RequestDetailPage() {
   return <ResponseView request={request} uid={uid} onCounter={() => setMode("counter")} />;
 }
 
-// ── Screen — Request Response (16:66) ──────────────────────────────────
-
 function ResponseView({
   request,
   uid,
@@ -112,8 +99,6 @@ function ResponseView({
   const other = isInitiator ? request.receiving_user : request.initiating_user;
   const respondable = canRespond(request, uid);
   const cancellable = canCancel(request, uid);
-  // The recipient of a Borrow request is the prospective lender — they
-  // choose how the money moves when they accept.
   const needsDisbursement = respondable && request.request_type === "Borrow";
   const busy = accept.isPending || decline.isPending || cancel.isPending;
   const err =
@@ -259,8 +244,6 @@ function ResponseView({
   );
 }
 
-// ── Screen — Counter-Proposal Received (49:2500) ───────────────────────
-
 function CounterReceivedView({ request, uid }: { request: Request; uid: string | undefined }) {
   const navigate = useNavigate();
   const accept = useAcceptRequest();
@@ -270,7 +253,6 @@ function CounterReceivedView({ request, uid }: { request: Request; uid: string |
   const busy = accept.isPending || decline.isPending;
   const err = errorMessage(accept.error) ?? errorMessage(decline.error);
 
-  // "before → after" for anything the counter changed; "— unchanged" otherwise.
   const amountText =
     counter.amount && counter.amount.amount !== request.amount.amount
       ? `${formatMoney(request.amount)} → ${formatMoney(counter.amount)}`
@@ -354,8 +336,6 @@ function CounterReceivedView({ request, uid }: { request: Request; uid: string |
     </CenteredLayout>
   );
 }
-
-// ── Screen — Negotiate Terms (16:132) ──────────────────────────────────
 
 interface InstallmentDraft {
   amount: string;

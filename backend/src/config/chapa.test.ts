@@ -1,14 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Guards the one configuration mistake that would be both silent and
-// expensive: selecting FakeChapaClient in a deployed environment. It accepts
-// every webhook signature, so a server running it will confirm payments and
-// activate obligations from any unsigned body posted to the webhook URL.
-//
-// The fake must therefore be reachable only by explicit opt-in, and missing
-// secrets must fail loudly. These tests exist so that can't regress to a
-// fallback.
-
 const CHAPA_KEYS = [
   "CHAPA_FAKE",
   "CHAPA_SECRET_KEY",
@@ -20,7 +11,6 @@ const CHAPA_KEYS = [
 let saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
-  // config/chapa.ts memoizes the client, so each case needs a fresh module.
   vi.resetModules();
   saved = Object.fromEntries(CHAPA_KEYS.map((k) => [k, process.env[k]]));
   for (const k of CHAPA_KEYS) delete process.env[k];
@@ -71,7 +61,6 @@ describe("getChapaClient", () => {
 });
 
 describe("assertRuntimeConfig", () => {
-  // config/env.ts validates DATABASE_URL and the Firebase trio at import.
   function stubRequiredEnv(): void {
     vi.stubEnv("DATABASE_URL", "postgresql://localhost/x");
     vi.stubEnv("FIREBASE_PROJECT_ID", "x");

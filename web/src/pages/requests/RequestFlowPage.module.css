@@ -1,13 +1,9 @@
-/* Figma: Flow — Borrow Request (15:2 / 15:79 / 15:146) and
- * Flow — Lending Record (15:208 … 15:409). */
-
 .stack {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* "Btn Row" — 6px of top padding, two FILL buttons 12 apart. */
 .btnRow {
   display: flex;
   gap: 12px;
@@ -23,7 +19,6 @@
   color: var(--color-text-gray);
 }
 
-/* "Schedule Header" (77:1269). */
 .scheduleHeader {
   display: flex;
   align-items: center;
@@ -36,7 +31,6 @@
   gap: 8px;
 }
 
-/* "Inst Editor N" (77:1274): fixed 110px label, two FILL inputs, gap 12. */
 .instRow {
   display: flex;
   align-items: center;

@@ -108,7 +108,6 @@ describe("POST /notifications/read", () => {
       .send({ notification_ids: ["ntf-1", "someone-elses"] });
 
     expect(res.status).toBe(204);
-    // The userId clause is what stops one user marking another's feed read.
     expect(prisma.notification.updateMany).toHaveBeenCalledWith({
       where: { userId: me.id, isRead: false, id: { in: ["ntf-1", "someone-elses"] } },
       data: { isRead: true },
@@ -157,7 +156,6 @@ describe("PATCH /notifications/preferences", () => {
       reminders: true,
       telebirr: true,
     });
-    // The other six are absent from the update, not written as `true`.
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: me.id },
       data: { prefGroupExpenses: false },
@@ -174,8 +172,6 @@ describe("PATCH /notifications/preferences", () => {
   });
 });
 
-// Every catalog id has to land in one of the seven switches, or it would
-// silently bypass the user's choice.
 describe("preference mapping", () => {
   it("routes each event family to its switch", () => {
     expect(categoryOf("BR-01")).toBe("requests");
@@ -188,8 +184,6 @@ describe("preference mapping", () => {
     expect(categoryOf("REM-01")).toBe("reminders");
   });
 
-  // RS splits: proposing/accepting a schedule is a schedule event, but the
-  // due-date nudges are reminders (§13.3).
   it("splits the RS family between schedules and reminders", () => {
     expect(categoryOf("RS-01")).toBe("schedules");
     expect(categoryOf("RS-03")).toBe("schedules");
@@ -204,8 +198,6 @@ describe("preference mapping", () => {
   });
 });
 
-// The catalog is the single source of the wording, so it's worth asserting
-// the §13.2 copy directly rather than only through a route.
 describe("§13.2 catalog", () => {
   it("renders BR-01 exactly as the catalog specifies", () => {
     expect(renderNotification("BR-01", { name: "Helen Girma", amount: "1,200 ETB" })).toEqual({
@@ -235,9 +227,6 @@ describe("§13.2 catalog", () => {
     expect(referenceTypeFor("BSS-05")).toBeNull();
   });
 
-  // The enum carries the whole catalog, including events for features that
-  // don't exist yet — rendering one of those must fail loudly rather than
-  // silently produce an empty notification.
   it("throws for a catalog id with no template yet", () => {
     expect(() => renderNotification("OM-01", {})).toThrow(/OM-01/);
   });

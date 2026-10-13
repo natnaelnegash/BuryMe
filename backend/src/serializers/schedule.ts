@@ -9,7 +9,6 @@ export function toInstallmentResponse(i: Installment): Schemas["Installment"] {
     installment_id: i.id,
     amount: toMoney(i.amount),
     due_date: i.dueDate.toISOString().slice(0, 10),
-    // No spaces in these enums — Prisma identifiers equal the contract strings.
     status: i.status,
     paid_at: i.paidAt?.toISOString() ?? null,
   };

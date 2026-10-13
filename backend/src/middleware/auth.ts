@@ -3,10 +3,6 @@ import type { NextFunction, Request, Response } from "express";
 import { auth } from "../config/firebase.js";
 import { ApiError } from "./errors.js";
 
-// The verified identity a request carries once `requireAuth` has run.
-// `phoneNumber` (not `email`) is what Slice 1 relies on — see the plan's
-// note that this is the Firebase Auth identity phone, distinct from any
-// TelebirrAccount.telebirr_number added later.
 export interface AuthContext {
   uid: string;
   phoneNumber: string | null;

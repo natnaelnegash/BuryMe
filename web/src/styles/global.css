@@ -1,7 +1,5 @@
 @import "./tokens.css";
 
-/* Minimal reset — just enough to stop browser defaults from fighting the
- * design system. Component styling lives in each component's .module.css. */
 *,
 *::before,
 *::after {

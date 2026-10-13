@@ -19,15 +19,6 @@ import { todayIso } from "../../lib/dates.js";
 import { formatMoney } from "../../lib/money.js";
 import styles from "./GroupExpenseFlowPage.module.css";
 
-// Figma: Flow — Group Expense · Step 1 (27:330 / host 27:360) and Step 2
-// (27:410 / host 27:440). Two steps: pick who's splitting, then enter the
-// total and each person's share. The payer's own share is counted in the
-// total but never becomes an obligation (§8.12).
-//
-// Deviation from the frames: they have no due-date field, but the spawned
-// obligations need one (contract CreateGroupExpenseInput.due_date), so
-// "Repayment due date" sits under the total/date row.
-
 type Participant = Schemas["UserSummary"];
 
 export function GroupExpenseFlowPage() {
@@ -38,13 +29,11 @@ export function GroupExpenseFlowPage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [stepError, setStepError] = useState<string | null>(null);
 
-  // Step 1 — participants.
   const [query, setQuery] = useState("");
   const { data: results, isSearching, searchNow, term } = useSearchUsersQuery(query);
   const [selected, setSelected] = useState<Participant[]>([]);
   const [includeMe, setIncludeMe] = useState(true);
 
-  // Step 2 — amounts.
   const [description, setDescription] = useState("");
   const [total, setTotal] = useState("");
   const [expenseDate, setExpenseDate] = useState(todayIso());
@@ -59,8 +48,6 @@ export function GroupExpenseFlowPage() {
   }, [selected, shares, includeMe, myShare]);
   const balanced = totalNumber > 0 && Math.abs(assigned - totalNumber) <= 0.01;
 
-  // Search results minus anyone already picked, and never the payer — they
-  // join via the "include me" toggle instead.
   const candidates = (results ?? []).filter((u) => u.user_id !== buryMeUser?.user_id);
 
   function toggleParticipant(user: Participant) {
@@ -77,8 +64,6 @@ export function GroupExpenseFlowPage() {
   function splitEqually() {
     const parts = selected.length + (includeMe ? 1 : 0);
     if (!(totalNumber > 0) || parts === 0) return;
-    // Give everyone the floor share and hand the rounding remainder to the
-    // last person, so the shares always reconstruct the total exactly.
     const base = Math.floor((totalNumber / parts) * 100) / 100;
     const remainder = Math.round((totalNumber - base * parts) * 100) / 100;
     const next: Record<string, string> = {};
@@ -151,7 +136,6 @@ export function GroupExpenseFlowPage() {
         <form
           className={styles.stack}
           onSubmit={(e) => {
-            // Results already follow typing; Enter just skips the debounce.
             e.preventDefault();
             searchNow();
           }}
@@ -165,7 +149,6 @@ export function GroupExpenseFlowPage() {
             maxLength={100}
           />
 
-          {/* "Include Me Toggle" (43:1935) — field-bg card, radius 12. */}
           <div className={styles.includeMe}>
             <span className={styles.includeCol}>
               <span className={styles.includeTitle}>Include me in this split</span>
@@ -242,7 +225,6 @@ export function GroupExpenseFlowPage() {
           required
         />
 
-        {/* "Two Up" (77:1182) — two FILL fields, gap 16. */}
         <div className={styles.twoUp}>
           <Field
             label="Total amount"

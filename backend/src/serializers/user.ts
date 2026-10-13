@@ -29,8 +29,6 @@ export function toUserResponse(user: UserWithTelebirr): Schemas["User"] {
     display_name: user.displayName,
     profile_photo_url: user.profilePhotoUrl,
     identifier: user.identifier,
-    // Contract fixes this to the single value "Verified" (§8.5) — no
-    // unverified BuryMe profile exists.
     verification_status: "Verified",
     telebirr: user.telebirrAccount ? toTelebirrAccountResponse(user.telebirrAccount) : null,
     notification_preferences: toNotificationPreferencesResponse(user),

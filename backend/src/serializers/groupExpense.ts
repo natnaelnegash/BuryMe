@@ -16,10 +16,6 @@ export const WITH_EXPENSE_PARTIES = {
   participants: { include: { participant: true, obligation: true } },
 } as const;
 
-// `outstanding_total` is viewer-relative: the payer is owed every
-// participant's remaining share, while a participant only ever sees their
-// own. The payer's own share never appears — it is not an obligation
-// (§8.12). Summed as Decimal so the shares reconstruct exactly.
 function outstandingTotal(expense: GroupExpenseWithParties, viewerId: string): Prisma.Decimal {
   const rows =
     expense.payerId === viewerId
@@ -50,8 +46,6 @@ export function toGroupExpenseResponse(
       participant_entry_id: p.id,
       participant: toUserSummaryResponse(p.participant),
       assigned_amount: toMoney(p.assignedAmount),
-      // Always set in practice — the obligation is created in the same
-      // transaction as the participant row.
       obligation_id: p.obligation?.id ?? "",
     })),
     created_at: expense.createdAt.toISOString(),

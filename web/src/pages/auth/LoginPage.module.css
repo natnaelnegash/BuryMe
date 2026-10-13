@@ -1,6 +1,3 @@
-/* Figma: Auth — Login (37:1252). The card's own padding/gap come from
- * AuthLayout; this is just the form stack inside it. */
-
 .form {
   display: flex;
   flex-direction: column;

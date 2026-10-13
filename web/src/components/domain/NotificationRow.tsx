@@ -5,9 +5,6 @@ import { formatRelative } from "../../lib/dates.js";
 import { notificationHref } from "../../hooks/useNotifications.js";
 import styles from "./NotificationRow.module.css";
 
-// Figma: one row of the Notification Feed (37:1481). Tapping it opens the
-// referenced entity per the §13.2 catalog's Navigation Target column, and
-// marks it read.
 export function NotificationRow({
   notification,
   onOpen,

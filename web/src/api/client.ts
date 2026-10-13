@@ -4,8 +4,6 @@ import { auth } from "./firebase.js";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Thrown on any non-2xx response, carrying the contract's Error envelope
-// fields directly so callers can branch on `code` without re-parsing JSON.
 export class ApiError extends Error {
   constructor(
     public readonly code: Schemas["ErrorCode"],
@@ -18,12 +16,6 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * The request never reached the server — no response, so no error envelope
- * and no `ErrorCode` to carry. Kept distinct from `ApiError` because the two
- * mean different things to the user: offline and retryable, versus the
- * server having refused.
- */
 export class NetworkError extends Error {
   constructor(cause?: unknown) {
     super("You’re offline. Please check your connection and try again.");
@@ -46,8 +38,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch (err) {
-    // `fetch` rejects only when the request itself failed — DNS, refused
-    // connection, dropped network. An HTTP error status resolves normally.
+    // `fetch` rejects only when the request never left — an HTTP error status
+    // resolves normally.
     throw new NetworkError(err);
   }
 

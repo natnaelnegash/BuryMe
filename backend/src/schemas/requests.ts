@@ -3,8 +3,6 @@ import { z } from "zod";
 import { ApiError } from "../middleware/errors.js";
 import { moneySchema } from "./parse.js";
 
-// Requests (§8.5, §12.2.2).
-
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 export const proposedScheduleInputSchema = z
@@ -43,9 +41,6 @@ export const lendRequestInputSchema = z
   })
   .strict();
 
-// Repayment is scoped to Lump Sum obligations only for now (Slice 3) —
-// `installment_id` is required iff the obligation is Installments — the
-// route checks that against the schedule.
 export const repaymentRequestBodySchema = z
   .object({
     installment_id: z.string().min(1).nullable().optional(),
@@ -66,11 +61,6 @@ export const createRequestInputSchema = z.discriminatedUnion("request_type", [
   repaymentRequestInputSchema,
 ]);
 
-// All fields optional (a counter may adjust only some terms), but at least
-// one must be present — an empty counter is meaningless regardless of
-// request type. Note these fields don't meaningfully fit Repayment's shape
-// (installment_id/note) — permitted by the schema, but no web UI exercises
-// countering a Repayment request.
 export const counterProposalInputSchema = z
   .object({
     amount: moneySchema.optional(),
@@ -94,11 +84,6 @@ export interface ProposedTerms {
   dueDate: string;
 }
 
-// Cross-field validation shared by request creation and counter submission
-// (§12.2.2/§12.2.3): schedule required iff Installments; 2-60 entries;
-// entries sum to the amount (0.01 tolerance); dates strictly ascending,
-// each in the future, none past the overall due date; due_date itself
-// 1 day to 3 years out.
 export function assertValidProposedTerms(terms: ProposedTerms): void {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

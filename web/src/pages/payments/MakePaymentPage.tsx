@@ -18,11 +18,6 @@ import { formatDate } from "../../lib/dates.js";
 import { formatMoney } from "../../lib/money.js";
 import styles from "./MakePaymentPage.module.css";
 
-// Figma: Screen — Make Payment (16:31, host 16:32). Borrower repays via
-// Chapa: the amount is fixed to the outstanding balance (§12.2.4), the only
-// method is Telebirr, and the primary action opens Chapa's checkout. The
-// lender receives the money once both hops confirm; the obligation settles
-// then, not now.
 export function MakePaymentPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,8 +25,6 @@ export function MakePaymentPage() {
   const { data: o, isLoading, error } = useObligationQuery(id);
   const pay = useInitiateChapaPayment();
   const { data: schedule } = useScheduleQuery(o);
-  // Installments: which row this payment settles. Defaults to the next
-  // payable one once the schedule arrives; the borrower can pick another.
   const [installmentId, setInstallmentId] = useState<string | null>(null);
   useEffect(() => {
     if (schedule && !installmentId) setInstallmentId(nextPayable(schedule)?.installment_id ?? null);
@@ -56,7 +49,6 @@ export function MakePaymentPage() {
       </CenteredLayout>
     );
   }
-  // Borrower only, and only while there's something to repay.
   const repayable = o.status === "Active" || o.status === "Partially Paid";
   if (o.borrower.user_id !== buryMeUser?.user_id || !repayable) {
     return <Navigate to={`/obligations/${o.obligation_id}`} replace />;
@@ -137,8 +129,6 @@ export function MakePaymentPage() {
 
         <Note color="gray">The amount is fixed by the agreed terms and can’t be changed.</Note>
 
-        {/* A gateway failure is the design's Payment Failed block (39:1859);
-            anything else stays an inline line beside the button. */}
         {pay.error && hasErrorBlock(pay.error) ? (
           <ErrorState error={pay.error} onRetry={handlePay} inset />
         ) : (

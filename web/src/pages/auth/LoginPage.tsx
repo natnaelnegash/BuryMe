@@ -57,11 +57,6 @@ export function LoginPage() {
           required
         />
 
-        {/* The design has a password-reset flow (Figma 66:920 / 66:935), but it
-            can't be wired up yet: logins are keyed to a synthetic email derived
-            from the phone number, which is not a real inbox, so Firebase's
-            email-based reset could never deliver. Left inert pending a decision
-            on how reset should actually work (likely phone OTP re-verification). */}
         <span className={styles.forgot}>Forgot password?</span>
 
         {error && (

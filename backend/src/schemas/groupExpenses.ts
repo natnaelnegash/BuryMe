@@ -2,10 +2,6 @@ import { z } from "zod";
 
 import { moneySchema } from "./parse.js";
 
-// POST /group-expenses body — contract CreateGroupExpenseInput (§12.2.2).
-// Cross-field rules (sum tolerance, payer not a participant, date bounds)
-// live in `assertValidGroupExpense` in domain/groupExpense.ts, next to the
-// obligation-spawning logic they guard.
 export const createGroupExpenseInputSchema = z
   .object({
     total_amount: moneySchema,

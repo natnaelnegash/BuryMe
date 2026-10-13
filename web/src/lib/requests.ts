@@ -1,8 +1,5 @@
 import type { Schemas } from "@buryme/shared";
 
-// Who may act on a request, mirroring the backend's own gating in
-// backend/src/routes/requests.ts: while Pending the recipient responds;
-// once Countered the ball is back with the original initiator.
 export function canRespond(request: Schemas["Request"], uid: string | undefined): boolean {
   if (!uid) return false;
   return (
@@ -16,7 +13,6 @@ export function canCancel(request: Schemas["Request"], uid: string | undefined):
   return request.status === "Pending" && request.initiating_user.user_id === uid;
 }
 
-// The label the design puts on a request's status pill.
 export function requestStatusLabel(request: Schemas["Request"], uid: string | undefined): string {
   if (request.status === "Pending") {
     return request.receiving_user.user_id === uid

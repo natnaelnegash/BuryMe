@@ -15,7 +15,6 @@ export const listNotifications = (params?: { limit?: number; cursor?: string }) 
   return apiClient.get<NotificationPage>(`/notifications${suffix}`);
 };
 
-// Omitting the ids marks the whole feed read, per the contract.
 export const markNotificationsRead = (notificationIds?: string[]) =>
   apiClient.post<void>(
     "/notifications/read",

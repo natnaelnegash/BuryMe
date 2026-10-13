@@ -15,16 +15,6 @@ import { formatDate } from "../../lib/dates.js";
 import { formatMoney } from "../../lib/money.js";
 import styles from "./DisbursementPage.module.css";
 
-// Figma: Screen — Send Disbursement (49:2596). Lender-side confirmation for
-// a Through-App obligation. The amount is fixed by the agreed terms; the
-// primary action creates the disbursement Payment and sends the lender to
-// Chapa's checkout to pay the principal in (collection hop). The backend
-// then transfers it to the borrower's verified Telebirr and the obligation
-// becomes Active once Chapa confirms — BuryMe never fronts the money.
-//
-// The Obligation schema doesn't carry the borrower's Telebirr status, so
-// the backend's RECIPIENT_UNVERIFIED (409) is surfaced as the error rather
-// than pre-disabling the button.
 export function DisbursementPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -56,7 +46,6 @@ export function DisbursementPage() {
       </CenteredLayout>
     );
   }
-  // Only the lender of a Through-App obligation still awaiting funds.
   if (o.lender.user_id !== buryMeUser?.user_id || o.status !== "Pending Disbursement") {
     return <Navigate to={`/obligations/${o.obligation_id}`} replace />;
   }
@@ -74,8 +63,6 @@ export function DisbursementPage() {
     disburse.mutate(o.obligation_id, {
       onSuccess: (payment) => {
         if (payment.checkout_url) {
-          // Hand off to Chapa's hosted checkout; it returns the lender to
-          // the obligation page afterwards.
           window.location.assign(payment.checkout_url);
         } else {
           navigate(`/obligations/${o.obligation_id}`, { state: { disbursementSent: true } });

@@ -25,18 +25,6 @@ import { formatMoney } from "../../lib/money.js";
 import { isOverdue, obligationDirection, PILL_BY_STATUS } from "../../lib/obligations.js";
 import styles from "./ObligationDetailPage.module.css";
 
-// Figma: Obligation Detail — lender — Active / Pending Disbursement /
-// Partially Paid / Settled (14:2, 14:97, 14:198, 14:300). One layout,
-// driven by the obligation's status and which side the viewer is on.
-//
-// Actions by role and state: lender → Request Repayment (overdue Lump
-// Sum), Record External Payment, Send disbursement (Pending Disbursement);
-// borrower → Make Payment (Chapa), Record External Payment — per
-// installment on Installments obligations. The Payments card lists
-// GET /obligations/{id}/payments with Acknowledge / Dispute on pending
-// external rows; the Activity timeline is derived from the obligation's
-// fields plus confirmed payments — there is no events endpoint.
-
 type Obligation = Schemas["Obligation"];
 
 function errorMessage(error: unknown): string | null {
@@ -62,7 +50,6 @@ const STATUS_COLOR: Record<string, TimelineColor> = {
 export function ObligationDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  // Set by DisbursementPage after a 202 so the lender sees confirmation.
   const disbursementSent = Boolean(
     (useLocation().state as { disbursementSent?: boolean } | null)?.disbursementSent,
   );
@@ -72,9 +59,6 @@ export function ObligationDetailPage() {
   const repayment = useRequestRepayment();
   const { data: payments = [] } = usePaymentsQuery(id);
   const { data: schedule } = useScheduleQuery(o);
-  // Only set when this obligation was spawned by a group expense (§8.12);
-  // the query stays disabled until then, and both parties to the
-  // obligation are parties to the expense, so the read is always allowed.
   const { data: originatingExpense } = useGroupExpenseQuery(o?.originating_expense_id ?? undefined);
   const acknowledge = useAcknowledgePayment();
   const dispute = useDisputePayment();
@@ -100,8 +84,6 @@ export function ObligationDetailPage() {
   const nextIndex = installments.findIndex((i) => i === nextInstallment) + 1;
   const overdueInstallment = installments.find((i) => i.status === "Overdue");
   const overdueIndex = installments.findIndex((i) => i === overdueInstallment) + 1;
-  // Repayments flow while there's something outstanding; a repayment
-  // request is an escalation limited to what's actually overdue.
   const repayable = o.status === "Active" || o.status === "Partially Paid";
   const canChase =
     lender && (o.repayment_type === "Lump Sum" ? overdue : Boolean(overdueInstallment));
@@ -118,7 +100,6 @@ export function ObligationDetailPage() {
 
       <div className={styles.cols}>
         <div className={styles.mainCol}>
-          {/* Header Card (14:35) */}
           <section className={styles.headerCard}>
             <Avatar name={counterparty.display_name} size={56} accent={lender ? "teal" : "amber"} />
             <div className={styles.hCol}>
@@ -140,7 +121,6 @@ export function ObligationDetailPage() {
             </div>
           </section>
 
-          {/* Details Card (14:50) */}
           <section className={styles.detailsCard}>
             <SummaryRow label="Total amount" value={formatMoney(o.principal_amount)} />
             <SummaryRow label="Repayment type" value={o.repayment_type} />
@@ -165,8 +145,6 @@ export function ObligationDetailPage() {
             />
           </section>
 
-          {/* Repayment schedule — GET /obligations/{id}/schedule (Installments
-              only). Overdue rows are what Request Repayment can target. */}
           {schedule && (
             <section className={styles.historyCard}>
               <div className={styles.scheduleHead}>
@@ -190,9 +168,6 @@ export function ObligationDetailPage() {
             </section>
           )}
 
-          {/* Payments card — GET /obligations/{id}/payments. Pending external
-              rows carry Acknowledge / Dispute for the party who didn't record
-              them (§6.4.3). */}
           {payments.length > 0 && (
             <section className={styles.historyCard}>
               <h2 className={styles.cardTitle}>Payments</h2>
@@ -268,7 +243,6 @@ export function ObligationDetailPage() {
             </section>
           )}
 
-          {/* History Card (14:66) */}
           <section className={styles.historyCard}>
             <h2 className={styles.cardTitle}>Activity</h2>
             <ul className={styles.timeline}>
@@ -285,7 +259,6 @@ export function ObligationDetailPage() {
           </section>
         </div>
 
-        {/* Actions Card (14:90) */}
         <aside className={styles.sideCol}>
           <section className={styles.actionsCard}>
             <h2 className={styles.cardTitle}>Actions</h2>
@@ -326,7 +299,6 @@ export function ObligationDetailPage() {
                   onClick={() =>
                     repayment.mutate({
                       obligationId: o.obligation_id,
-                      // Installments: chase the earliest overdue row (§6.2.2).
                       ...(overdueInstallment
                         ? { body: { installment_id: overdueInstallment.installment_id } }
                         : {}),
@@ -408,7 +380,6 @@ function buildTimeline(
   if (o.originating_request_id) {
     entries.push({ title: "Terms agreed", subtitle: formatDate(o.created_at), color: "teal" });
   }
-  // Confirmed payments, oldest first (the list arrives newest first).
   for (const p of [...payments].reverse()) {
     if (p.status !== "Confirmed") continue;
     const mine = p.payer.user_id === uid;

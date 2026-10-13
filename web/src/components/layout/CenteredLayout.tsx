@@ -7,18 +7,11 @@ import styles from "./CenteredLayout.module.css";
 interface CenteredLayoutProps {
   title: string;
   subtitle: string;
-  /** Column width from the Figma frame — 680 for Profile/Telebirr, 720 for Search. */
   width: number;
-  /** Renders the "← Back" control; navigates back in history by default. */
   back?: boolean | (() => void);
-  /** Multi-step flows (15:33): "Step X of Y" above the title and a
-   *  progress track under the subtitle. */
   step?: { current: number; total: number };
-  /** Card contents — or, with `plain`, the column contents. */
   children: ReactNode;
-  /** Skip the card wrapper; the screen lays out its own cards (16:132). */
   plain?: boolean;
-  /** Anything that belongs in the column but outside the card. */
   after?: ReactNode;
 }
 

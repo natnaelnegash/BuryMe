@@ -25,9 +25,6 @@ export function useSettlementSuggestionQuery(suggestionId: string | undefined) {
   });
 }
 
-// A settlement always touches two obligations — accepting settles both, and
-// proposing takes the pair out of the "ready to settle" set — so the
-// obligations namespace is stale after every one of these.
 function useInvalidateSettlements() {
   const queryClient = useQueryClient();
   return () =>

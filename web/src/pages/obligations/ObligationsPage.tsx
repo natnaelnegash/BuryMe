@@ -24,10 +24,6 @@ function mutationErrorMessage(error: unknown): string | null {
   return error instanceof ApiError ? error.message : "Something went wrong.";
 }
 
-// Figma's filter tabs on this screen. "Group expenses" is its own tab: a
-// shared bill shows as one card for the whole expense, so its per-participant
-// obligations are kept out of the other tabs (`origin=personal`) rather than
-// listed twice.
 type Tab = "all" | "active" | "overdue" | "settled" | "group";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -73,10 +69,8 @@ export function ObligationsPage() {
 
   const expenses = expensePage?.data ?? [];
   const isEmpty = isGroupTab ? expenses.length === 0 : obligations.length === 0;
-  // The design's empty block is for having no obligations at all, and its
-  // "Record a loan" CTA only makes sense then. A tab that merely filters down
-  // to nothing keeps the plain line — otherwise the Overdue tab would claim
-  // you have no obligations while you hold ten active ones.
+  // The full empty block only when there are no obligations at all; a tab that
+  // merely filters to nothing keeps the plain line.
   const neverHadAny = !isGroupTab && all.length === 0;
 
   return (
@@ -111,12 +105,9 @@ export function ObligationsPage() {
         )
       ) : (
         <div className={styles.grid}>
-          {/* Group tab: one card per expense (221:4496), not per share. */}
           {isGroupTab &&
             expenses.map((e) => {
               const payer = e.payer.user_id === uid;
-              // "3 people" = the participants plus the payer, when they took
-              // a share of the bill themselves.
               const people = e.participants.length + (e.payer_share_included ? 1 : 0);
 
               return (

@@ -5,9 +5,6 @@ import { DISBURSEMENT_METHOD, OBLIGATION_STATUS, REPAYMENT_TYPE } from "./enums.
 import { toMoney } from "./money.js";
 import { toUserSummaryResponse } from "./user.js";
 
-// `originatingExpense` is the GroupExpenseParticipant row this obligation
-// was spawned from; the contract's `originating_expense_id` names the
-// expense itself, so the serializer reads through to `expenseId`.
 type ObligationWithUsers = ObligationModel & {
   borrower: User;
   lender: User;

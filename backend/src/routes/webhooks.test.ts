@@ -7,9 +7,6 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     payment: { findUnique: vi.fn(), update: vi.fn() },
-    // Notifications are raised as a side effect of most of these routes.
-    // Mocked with a resolved row so the emit path runs to completion
-    // instead of failing silently inside notify()'s catch.
     notification: {
       create: vi.fn().mockResolvedValue({
         id: "ntf-1",
@@ -59,9 +56,6 @@ function pendingPayment(overrides: Record<string, unknown> = {}) {
     paymentDirection: "Disbursement",
     status: "PendingAcknowledgement",
     chapaTransactionId: null,
-    // Both parties are included on the notification path's re-read
-    // (domain/notifications.ts), which quotes names and the post-payment
-    // balance.
     payer: lender,
     recipient: borrower,
     obligation: {
@@ -114,7 +108,6 @@ describe("POST /webhooks/chapa/checkout", () => {
       where: { id: "pay-1" },
       data: { chapaTransactionId: "tx-1" },
     });
-    // Still pending — only the transfer webhook confirms.
     expect(prisma.obligation.update).not.toHaveBeenCalled();
   });
 
@@ -226,7 +219,6 @@ describe("POST /webhooks/chapa/transfer", () => {
     });
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
 
-    // LR-05 to both parties, each naming the lender who sent the funds.
     await vi.waitFor(() =>
       expect(vi.mocked(prisma.notification.create).mock.calls.length).toBeGreaterThanOrEqual(2),
     );
@@ -282,10 +274,6 @@ describe("POST /webhooks/chapa/transfer — repayments", () => {
         outstandingBalance: new Prisma.Decimal(1000),
       },
     });
-    // The handler looks the payment up first, then the notification path
-    // re-reads it after the transaction has committed — so the second read
-    // must show the post-payment balance, which is what PAY-01/PAY-02
-    // quote.
     vi.mocked(prisma.payment.findUnique)
       .mockResolvedValueOnce(repayment as never)
       .mockResolvedValue({
@@ -300,8 +288,6 @@ describe("POST /webhooks/chapa/transfer — repayments", () => {
     expect(data.outstandingBalance.toNumber()).toBe(0);
     expect(data.status).toBe("Settled");
 
-    // A repayment splits: PAY-01 to the payer, PAY-02 to the recipient,
-    // both quoting the balance AFTER the payment.
     await vi.waitFor(() =>
       expect(vi.mocked(prisma.notification.create).mock.calls.length).toBeGreaterThanOrEqual(2),
     );

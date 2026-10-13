@@ -7,9 +7,6 @@ vi.mock("../config/firebase.js", () => ({
 vi.mock("../db/client.js", () => ({
   prisma: {
     user: { findUnique: vi.fn() },
-    // Notifications are raised as a side effect of most of these routes.
-    // Mocked with a resolved row so the emit path runs to completion
-    // instead of failing silently inside notify()'s catch.
     notification: {
       create: vi.fn().mockResolvedValue({
         id: "ntf-1",
@@ -143,7 +140,6 @@ describe("POST /requests (Borrow/Lend)", () => {
     expect(res.status).toBe(201);
     expect(res.body.status).toBe("Pending");
 
-    // §13.2 BR-01 goes to the lender, carrying the borrower's name.
     await vi.waitFor(() => expect(prisma.notification.create).toHaveBeenCalled());
     const data = vi.mocked(prisma.notification.create).mock.calls[0]![0]!.data as Record<
       string,
@@ -165,7 +161,7 @@ describe("POST /requests/:id/counter", () => {
     vi.mocked(prisma.request.findFirst).mockResolvedValue(pendingBorrowRequest() as never);
     const res = await request(app)
       .post("/api/v1/requests/req-1/counter")
-      .set(AUTH_HEADER) // borrower = initiator
+      .set(AUTH_HEADER)
       .send({ amount: { amount: 900, currency: "ETB" } });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("STATUS_CONFLICT");
@@ -181,7 +177,7 @@ describe("POST /requests/:id/counter", () => {
     );
     const res = await request(app)
       .post("/api/v1/requests/req-1/counter")
-      .set(OTHER_AUTH_HEADER) // lender = receiving user
+      .set(OTHER_AUTH_HEADER)
       .send({ amount: { amount: 900, currency: "ETB" } });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("Countered");
@@ -212,7 +208,6 @@ describe("POST /requests/:id/accept", () => {
     vi.mocked(prisma.request.findFirst).mockResolvedValue(
       pendingBorrowRequest({ status: "Countered" }) as never,
     );
-    // lender countered; only the original initiator (borrower) may accept now
     const res = await request(app)
       .post("/api/v1/requests/req-1/accept")
       .set(OTHER_AUTH_HEADER)
@@ -232,7 +227,7 @@ describe("POST /requests/:id/accept", () => {
 
     const res = await request(app)
       .post("/api/v1/requests/req-1/accept")
-      .set(OTHER_AUTH_HEADER) // lender = receiving user, Pending state
+      .set(OTHER_AUTH_HEADER)
       .send({ disbursement_method: "Already Given" });
     expect(res.status).toBe(200);
     expect(prisma.obligation.create).toHaveBeenCalledWith(
@@ -307,7 +302,7 @@ describe("POST /requests (Repayment)", () => {
     vi.mocked(prisma.obligation.findUnique).mockResolvedValue(activeObligation as never);
     const res = await request(app)
       .post("/api/v1/requests")
-      .set(AUTH_HEADER) // borrower, not lender
+      .set(AUTH_HEADER)
       .send({ request_type: "Repayment", obligation_id: "obl-1" });
     expect(res.status).toBe(400);
   });
@@ -319,7 +314,7 @@ describe("POST /requests (Repayment)", () => {
     } as never);
     const res = await request(app)
       .post("/api/v1/requests")
-      .set(OTHER_AUTH_HEADER) // lender
+      .set(OTHER_AUTH_HEADER)
       .send({ request_type: "Repayment", obligation_id: "obl-1" });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("STATUS_CONFLICT");

@@ -31,9 +31,6 @@ import { SearchPage } from "./pages/users/SearchPage.js";
 import { TelebirrPage } from "./pages/profile/TelebirrPage.js";
 import { TelebirrVerifyPage } from "./pages/profile/TelebirrVerifyPage.js";
 
-// Gates on auth status, then drops the screen into the app shell (top nav +
-// body container) that every authenticated screen shares in the design. The
-// auth screens deliberately sit outside it — their Figma frames have no nav.
 function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   if (status === "loading") return <Spinner block label="Signing you in" />;
@@ -215,8 +212,6 @@ export default function App() {
           </RequireAuth>
         }
       />
-      {/* Inside RequireAuth so an unknown URL keeps the nav rather than
-          dropping the shell. A signed-out visitor is sent to /login first. */}
       <Route
         path="*"
         element={

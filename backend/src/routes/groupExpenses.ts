@@ -10,23 +10,16 @@ import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
 import { toGroupExpenseResponse, WITH_EXPENSE_PARTIES } from "../serializers/groupExpense.js";
 
-// Group expenses (§6.2.3, §8.12, §8.13): one payer records a shared bill and
-// the platform spawns one bilateral Obligation per participant — payer as
-// lender, participant as borrower, for that participant's share. The payer's
-// own share is recorded for completeness but never becomes an obligation.
 export const groupExpensesRouter = Router();
 
 groupExpensesRouter.use(requireAuth);
 
-// POST /group-expenses — contract: createGroupExpense.
 groupExpensesRouter.post("/", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
     const body = parseBody(createGroupExpenseInputSchema, req.body);
     await assertValidGroupExpense(body, uid);
 
-    // Everything in one transaction: a half-created expense would leave
-    // participants owing money on a bill that doesn't exist.
     const expense = await prisma.$transaction(async (tx) => {
       const created = await tx.groupExpense.create({
         data: {
@@ -47,8 +40,6 @@ groupExpensesRouter.post("/", async (req, res, next) => {
         include: { participants: true },
       });
 
-      // The payer already settled the bill outside the platform, so each
-      // obligation is Already Given and Active from the start.
       for (const entry of created.participants) {
         await tx.obligation.create({
           data: {
@@ -72,8 +63,6 @@ groupExpensesRouter.post("/", async (req, res, next) => {
       });
     });
 
-    // GE-01 to each participant — never to the payer, who has no obligation
-    // of their own (§8.12).
     for (const entry of expense.participants) {
       void notify({
         userId: entry.participantId,
@@ -92,7 +81,6 @@ groupExpensesRouter.post("/", async (req, res, next) => {
   }
 });
 
-// GET /group-expenses — contract: listGroupExpenses.
 groupExpensesRouter.get("/", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;
@@ -125,8 +113,6 @@ groupExpensesRouter.get("/", async (req, res, next) => {
   }
 });
 
-// GET /group-expenses/:groupExpenseId — contract: getGroupExpense. Visible
-// to the payer and to anyone who owes a share of it.
 groupExpensesRouter.get("/:groupExpenseId", async (req, res, next) => {
   try {
     const uid = req.auth!.uid;

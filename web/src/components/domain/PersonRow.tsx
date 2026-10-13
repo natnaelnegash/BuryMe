@@ -7,11 +7,8 @@ import styles from "./PersonRow.module.css";
 interface PersonRowProps {
   name: string;
   detail?: string;
-  /** Figma: Selected=True — the chosen recipient in a picker. */
   selected?: boolean;
   action?: ReactNode;
-  /** Makes the row a radio-style choice: clickable, with the trailing
-   *  Radio from the Person Row component set (46:2008). */
   onSelect?: () => void;
 }
 

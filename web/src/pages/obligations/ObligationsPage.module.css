@@ -1,5 +1,3 @@
-/* Figma: List — Obligations (27:2). */
-
 .page {
   display: flex;
   flex-direction: column;
@@ -12,7 +10,6 @@
   gap: 8px;
 }
 
-/* Two cards per row, 16px both ways — the design's wrapping 1200px grid. */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

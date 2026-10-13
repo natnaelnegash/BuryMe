@@ -1,5 +1,3 @@
-/* Figma: component set "Avatar" (29:912) — Size × Accent. */
-
 .avatar {
   display: flex;
   align-items: center;
@@ -10,8 +8,6 @@
   font-family: var(--font-family);
 }
 
-/* The design scales the initial with the circle (≈0.38 of its diameter)
- * rather than using a named text style. */
 .s40 {
   width: 40px;
   height: 40px;

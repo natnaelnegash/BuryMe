@@ -1,9 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mocked before any import pulls in the real modules — both would otherwise
-// throw at import time (config/firebase.ts needs real Admin SDK creds,
-// db/client.ts needs a real DATABASE_URL) or hit a real DB/Firebase project.
+// Mocked before any import pulls in the real modules.
 vi.mock("../config/firebase.js", () => ({
   auth: { verifyIdToken: vi.fn() },
 }));
