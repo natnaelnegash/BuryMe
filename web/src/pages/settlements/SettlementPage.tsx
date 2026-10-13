@@ -1,24 +1,24 @@
 import { useNavigate, useParams } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
-import { ApiError } from "../api/client.js";
-import { ErrorState } from "../components/domain/ErrorState.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Avatar } from "../components/ui/Avatar.js";
-import { Button } from "../components/ui/Button.js";
-import { Note } from "../components/ui/Note.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { StatusPill } from "../components/ui/StatusPill.js";
-import { SummaryRow } from "../components/ui/SummaryRow.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useObligationsQuery } from "../hooks/useObligations.js";
+import { ApiError } from "../../api/client.js";
+import { ErrorState } from "../../components/domain/ErrorState.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Avatar } from "../../components/ui/Avatar.js";
+import { Button } from "../../components/ui/Button.js";
+import { Note } from "../../components/ui/Note.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { StatusPill } from "../../components/ui/StatusPill.js";
+import { SummaryRow } from "../../components/ui/SummaryRow.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useObligationsQuery } from "../../hooks/useObligations.js";
 import {
   useAcceptSettlement,
   useCreateSettlementSuggestion,
   useDeclineSettlement,
   useSettlementSuggestionQuery,
-} from "../hooks/useSettlements.js";
-import { formatMoney } from "../lib/money.js";
+} from "../../hooks/useSettlements.js";
+import { formatMoney } from "../../lib/money.js";
 import styles from "./SettlementPage.module.css";
 
 // Figma: Screen — Bilateral Settlement (27:525) and Screen — Bilateral

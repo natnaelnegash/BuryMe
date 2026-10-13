@@ -4,29 +4,32 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell.js";
 import { Spinner } from "./components/ui/Spinner.js";
 import { useAuth } from "./hooks/useAuth.js";
-import { DashboardPage } from "./pages/DashboardPage.js";
-import { DisbursementPage } from "./pages/DisbursementPage.js";
-import { GroupExpenseDetailPage } from "./pages/GroupExpenseDetailPage.js";
-import { GroupExpenseFlowPage } from "./pages/GroupExpenseFlowPage.js";
-import { MakePaymentPage } from "./pages/MakePaymentPage.js";
-import { LoginPage } from "./pages/LoginPage.js";
-import { NewRequestPage } from "./pages/NewRequestPage.js";
-import { NotFoundPage } from "./pages/NotFoundPage.js";
-import { NotificationPreferencesPage } from "./pages/NotificationPreferencesPage.js";
-import { NotificationsPage } from "./pages/NotificationsPage.js";
-import { ObligationDetailPage } from "./pages/ObligationDetailPage.js";
-import { ObligationsPage } from "./pages/ObligationsPage.js";
-import { ProfileEditPage } from "./pages/ProfileEditPage.js";
-import { ProfilePage } from "./pages/ProfilePage.js";
-import { RecordPaymentPage } from "./pages/RecordPaymentPage.js";
-import { RegisterPage } from "./pages/RegisterPage.js";
-import { RequestDetailPage } from "./pages/RequestDetailPage.js";
-import { RequestFlowPage } from "./pages/RequestFlowPage.js";
-import { RequestsPage } from "./pages/RequestsPage.js";
-import { SettlementProposePage, SettlementRespondPage } from "./pages/SettlementPage.js";
-import { SearchPage } from "./pages/SearchPage.js";
-import { TelebirrPage } from "./pages/TelebirrPage.js";
-import { TelebirrVerifyPage } from "./pages/TelebirrVerifyPage.js";
+import { DashboardPage } from "./pages/dashboard/DashboardPage.js";
+import { DisbursementPage } from "./pages/payments/DisbursementPage.js";
+import { GroupExpenseDetailPage } from "./pages/expenses/GroupExpenseDetailPage.js";
+import { GroupExpenseFlowPage } from "./pages/expenses/GroupExpenseFlowPage.js";
+import { MakePaymentPage } from "./pages/payments/MakePaymentPage.js";
+import { LoginPage } from "./pages/auth/LoginPage.js";
+import { NewRequestPage } from "./pages/requests/NewRequestPage.js";
+import { NotFoundPage } from "./pages/errors/NotFoundPage.js";
+import { NotificationPreferencesPage } from "./pages/notifications/NotificationPreferencesPage.js";
+import { NotificationsPage } from "./pages/notifications/NotificationsPage.js";
+import { ObligationDetailPage } from "./pages/obligations/ObligationDetailPage.js";
+import { ObligationsPage } from "./pages/obligations/ObligationsPage.js";
+import { ProfileEditPage } from "./pages/profile/ProfileEditPage.js";
+import { ProfilePage } from "./pages/profile/ProfilePage.js";
+import { RecordPaymentPage } from "./pages/payments/RecordPaymentPage.js";
+import { RegisterPage } from "./pages/auth/RegisterPage.js";
+import { RequestDetailPage } from "./pages/requests/RequestDetailPage.js";
+import { RequestFlowPage } from "./pages/requests/RequestFlowPage.js";
+import { RequestsPage } from "./pages/requests/RequestsPage.js";
+import {
+  SettlementProposePage,
+  SettlementRespondPage,
+} from "./pages/settlements/SettlementPage.js";
+import { SearchPage } from "./pages/users/SearchPage.js";
+import { TelebirrPage } from "./pages/profile/TelebirrPage.js";
+import { TelebirrVerifyPage } from "./pages/profile/TelebirrVerifyPage.js";
 
 // Gates on auth status, then drops the screen into the app shell (top nav +
 // body container) that every authenticated screen shares in the design. The

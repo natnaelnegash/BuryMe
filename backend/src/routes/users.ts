@@ -4,15 +4,15 @@ import { Router } from "express";
 import { prisma } from "../db/client.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
-import { notify } from "../lib/notifications.js";
-import { confirmChallenge, issueChallenge } from "../lib/telebirrOtp.js";
+import { notify } from "../domain/notifications.js";
+import { confirmChallenge, issueChallenge } from "../domain/telebirrOtp.js";
+import { parseBody } from "../schemas/parse.js";
 import {
   confirmTelebirrOtpRequestSchema,
-  parseBody,
   searchUsersQuerySchema,
   updateProfileRequestSchema,
   verifyTelebirrRequestSchema,
-} from "../lib/validation.js";
+} from "../schemas/users.js";
 import {
   toTelebirrAccountResponse,
   toUserResponse,

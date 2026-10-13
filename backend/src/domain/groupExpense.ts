@@ -2,7 +2,7 @@ import { Prisma } from "../generated/prisma/client.js";
 
 import { prisma } from "../db/client.js";
 import { ApiError } from "../middleware/errors.js";
-import type { createGroupExpenseInputSchema } from "./validation.js";
+import type { createGroupExpenseInputSchema } from "../schemas/groupExpenses.js";
 import type { z } from "zod";
 
 // parseBody infers the schema's *input* type (currency has a default), so

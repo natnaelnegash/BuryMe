@@ -3,8 +3,8 @@ import { Router } from "express";
 import { prisma } from "../db/client.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
-import { etb, notify, notifySettledIfCleared } from "../lib/notifications.js";
-import { confirmedPaymentEffects, WITH_PAYMENT_PARTIES } from "../lib/payments.js";
+import { etb, notify, notifySettledIfCleared } from "../domain/notifications.js";
+import { confirmedPaymentEffects, WITH_PAYMENT_PARTIES } from "../domain/payments.js";
 import { toPaymentResponse } from "../serializers/payment.js";
 
 // Counterparty confirmation of externally-recorded payments (§6.4.3). Only

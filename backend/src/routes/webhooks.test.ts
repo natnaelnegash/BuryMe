@@ -60,7 +60,7 @@ function pendingPayment(overrides: Record<string, unknown> = {}) {
     status: "PendingAcknowledgement",
     chapaTransactionId: null,
     // Both parties are included on the notification path's re-read
-    // (lib/notifications.ts), which quotes names and the post-payment
+    // (domain/notifications.ts), which quotes names and the post-payment
     // balance.
     payer: lender,
     recipient: borrower,

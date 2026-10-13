@@ -1,18 +1,18 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
-import { ErrorState } from "../components/domain/ErrorState.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Field } from "../components/ui/Field.js";
-import { Note } from "../components/ui/Note.js";
-import { OptionCard } from "../components/ui/OptionCard.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { SummaryRow } from "../components/ui/SummaryRow.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useDisburseObligation, useObligationQuery } from "../hooks/useObligations.js";
-import { formatDate } from "../lib/dates.js";
-import { formatMoney } from "../lib/money.js";
+import { ApiError } from "../../api/client.js";
+import { ErrorState } from "../../components/domain/ErrorState.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Field } from "../../components/ui/Field.js";
+import { Note } from "../../components/ui/Note.js";
+import { OptionCard } from "../../components/ui/OptionCard.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { SummaryRow } from "../../components/ui/SummaryRow.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useDisburseObligation, useObligationQuery } from "../../hooks/useObligations.js";
+import { formatDate } from "../../lib/dates.js";
+import { formatMoney } from "../../lib/money.js";
 import styles from "./DisbursementPage.module.css";
 
 // Figma: Screen — Send Disbursement (49:2596). Lender-side confirmation for

@@ -4,14 +4,14 @@
 //
 // The fake client is an explicit opt-in (`CHAPA_FAKE=1`), never a fallback.
 // It accepts every webhook signature unconditionally
-// (lib/chapa.ts FakeChapaClient), so selecting it because a secret happened
+// (integrations/chapa.ts FakeChapaClient), so selecting it because a secret happened
 // to be blank would mean a deployed server confirming payments and
 // activating obligations from any unsigned body posted to the webhook URL.
 // Missing secrets therefore fail loudly instead.
 //
 // This deliberately does not consult NODE_ENV: nothing in the repo sets it,
 // so a guard conditioned on it is inert exactly where it matters.
-import { FakeChapaClient, HttpChapaClient, type ChapaClient } from "../lib/chapa.js";
+import { FakeChapaClient, HttpChapaClient, type ChapaClient } from "../integrations/chapa.js";
 import { webOrigin } from "./origins.js";
 
 let instance: ChapaClient | undefined;

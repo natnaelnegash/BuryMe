@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Field } from "../components/ui/Field.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useUpdateProfile } from "../hooks/useUsers.js";
+import { ApiError } from "../../api/client.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Field } from "../../components/ui/Field.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useUpdateProfile } from "../../hooks/useUsers.js";
 import styles from "./ProfileEditPage.module.css";
 
 // Figma: Screen — Profile Edit (38:1751). Same column/card shape as Profile

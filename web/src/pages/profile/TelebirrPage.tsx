@@ -1,14 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Field } from "../components/ui/Field.js";
-import { Note } from "../components/ui/Note.js";
-import { SummaryRow } from "../components/ui/SummaryRow.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useSendTelebirrOtp, useVerifyTelebirr } from "../hooks/useUsers.js";
+import { ApiError } from "../../api/client.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Field } from "../../components/ui/Field.js";
+import { Note } from "../../components/ui/Note.js";
+import { SummaryRow } from "../../components/ui/SummaryRow.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useSendTelebirrOtp, useVerifyTelebirr } from "../../hooks/useUsers.js";
 import styles from "./TelebirrPage.module.css";
 
 // Figma: Screen — Telebirr Verification (38:1694). Saves the number

@@ -14,8 +14,8 @@ vi.mock("../db/client.js", () => ({
 const { app } = await import("../app.js");
 const { auth } = await import("../config/firebase.js");
 const { prisma } = await import("../db/client.js");
-const { renderNotification, referenceTypeFor } = await import("../lib/notificationCatalog.js");
-const { categoryOf, wantsPush } = await import("../lib/notificationPrefs.js");
+const { renderNotification, referenceTypeFor } = await import("../domain/notificationCatalog.js");
+const { categoryOf, wantsPush } = await import("../domain/notificationPrefs.js");
 
 const AUTH = { Authorization: "Bearer test-token" };
 const me = { id: "user-1", identifier: "+251900000001" };

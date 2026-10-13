@@ -4,7 +4,7 @@ import { app } from "./app.js";
 import { env, assertRuntimeConfig } from "./config/env.js";
 import { initSocket } from "./config/socket.js";
 import { prisma } from "./db/client.js";
-import { startReminderScheduler } from "./lib/reminders.js";
+import { startReminderScheduler } from "./domain/reminders.js";
 
 // Fail before binding a port rather than at the first Chapa call, so a
 // misconfigured deploy shows up as a failed release instead of a payment

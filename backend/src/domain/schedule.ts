@@ -1,7 +1,7 @@
 import { prisma } from "../db/client.js";
 import type { Installment, Obligation, Prisma } from "../generated/prisma/client.js";
 import { ApiError } from "../middleware/errors.js";
-import type { ProposedTerms } from "./validation.js";
+import type { ProposedTerms } from "../schemas/requests.js";
 
 // Repayment schedules (§6.3.2, §8.7, §8.8): fixed at agreement, read-only
 // after. Rows are created inside the accept transaction; `Pending →

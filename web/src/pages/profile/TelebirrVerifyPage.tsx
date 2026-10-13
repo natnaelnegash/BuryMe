@@ -1,13 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Note } from "../components/ui/Note.js";
-import { OtpInput } from "../components/ui/OtpInput.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useConfirmTelebirrOtp, useSendTelebirrOtp } from "../hooks/useUsers.js";
+import { ApiError } from "../../api/client.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Note } from "../../components/ui/Note.js";
+import { OtpInput } from "../../components/ui/OtpInput.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useConfirmTelebirrOtp, useSendTelebirrOtp } from "../../hooks/useUsers.js";
 import styles from "./TelebirrVerifyPage.module.css";
 
 // Figma: Screen — Telebirr Verification · Code (66:855). Same column as the

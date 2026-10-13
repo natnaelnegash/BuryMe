@@ -2,19 +2,19 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
-import { ApiError } from "../api/client.js";
-import { PersonRow } from "../components/domain/PersonRow.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Field } from "../components/ui/Field.js";
-import { Note } from "../components/ui/Note.js";
-import { OptionCard } from "../components/ui/OptionCard.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { SummaryRow } from "../components/ui/SummaryRow.js";
-import { useCreateRequest } from "../hooks/useRequests.js";
-import { useSearchUsersQuery, useUserQuery } from "../hooks/useUsers.js";
-import { formatDate, todayIso } from "../lib/dates.js";
-import { formatMoney } from "../lib/money.js";
+import { ApiError } from "../../api/client.js";
+import { PersonRow } from "../../components/domain/PersonRow.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Field } from "../../components/ui/Field.js";
+import { Note } from "../../components/ui/Note.js";
+import { OptionCard } from "../../components/ui/OptionCard.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { SummaryRow } from "../../components/ui/SummaryRow.js";
+import { useCreateRequest } from "../../hooks/useRequests.js";
+import { useSearchUsersQuery, useUserQuery } from "../../hooks/useUsers.js";
+import { formatDate, todayIso } from "../../lib/dates.js";
+import { formatMoney } from "../../lib/money.js";
 import styles from "./RequestFlowPage.module.css";
 
 // Figma: Flow — Borrow Request · Steps 1–3 (15:2, 15:79, 15:146) and

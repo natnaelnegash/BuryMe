@@ -2,21 +2,21 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
-import { ApiError } from "../api/client.js";
-import { PersonRow } from "../components/domain/PersonRow.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Checkbox } from "../components/ui/Checkbox.js";
-import { Field } from "../components/ui/Field.js";
-import { Note } from "../components/ui/Note.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { SummaryRow } from "../components/ui/SummaryRow.js";
-import { Toggle } from "../components/ui/Toggle.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useCreateGroupExpense } from "../hooks/useGroupExpenses.js";
-import { useSearchUsersQuery } from "../hooks/useUsers.js";
-import { todayIso } from "../lib/dates.js";
-import { formatMoney } from "../lib/money.js";
+import { ApiError } from "../../api/client.js";
+import { PersonRow } from "../../components/domain/PersonRow.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Checkbox } from "../../components/ui/Checkbox.js";
+import { Field } from "../../components/ui/Field.js";
+import { Note } from "../../components/ui/Note.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { SummaryRow } from "../../components/ui/SummaryRow.js";
+import { Toggle } from "../../components/ui/Toggle.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useCreateGroupExpense } from "../../hooks/useGroupExpenses.js";
+import { useSearchUsersQuery } from "../../hooks/useUsers.js";
+import { todayIso } from "../../lib/dates.js";
+import { formatMoney } from "../../lib/money.js";
 import styles from "./GroupExpenseFlowPage.module.css";
 
 // Figma: Flow — Group Expense · Step 1 (27:330 / host 27:360) and Step 2

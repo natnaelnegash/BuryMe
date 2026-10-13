@@ -1,7 +1,7 @@
 import type { Schemas } from "@buryme/shared";
 
 import type { Installment } from "../generated/prisma/client.js";
-import type { ScheduleWithInstallments } from "../lib/schedule.js";
+import type { ScheduleWithInstallments } from "../domain/schedule.js";
 import { toMoney } from "./money.js";
 
 export function toInstallmentResponse(i: Installment): Schemas["Installment"] {

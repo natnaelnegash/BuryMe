@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { ErrorState } from "../components/domain/ErrorState.js";
-import { NotificationRow } from "../components/domain/NotificationRow.js";
-import { PageHeader } from "../components/layout/PageHeader.js";
-import { Button } from "../components/ui/Button.js";
-import { FilterChip } from "../components/ui/FilterChip.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { StateCard } from "../components/ui/StateCard.js";
-import { useMarkNotificationsRead, useNotificationsQuery } from "../hooks/useNotifications.js";
+import { ErrorState } from "../../components/domain/ErrorState.js";
+import { NotificationRow } from "../../components/domain/NotificationRow.js";
+import { PageHeader } from "../../components/layout/PageHeader.js";
+import { Button } from "../../components/ui/Button.js";
+import { FilterChip } from "../../components/ui/FilterChip.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { StateCard } from "../../components/ui/StateCard.js";
+import { useMarkNotificationsRead, useNotificationsQuery } from "../../hooks/useNotifications.js";
 import styles from "./NotificationsPage.module.css";
 
 // Figma: Screen — Notification Feed (37:1443). Back control, head, All /

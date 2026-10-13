@@ -57,7 +57,7 @@ describe("getChapaClient", () => {
   it("selects the fake only on explicit CHAPA_FAKE=1", async () => {
     process.env.CHAPA_FAKE = "1";
     const { getChapaClient } = await import("./chapa.js");
-    const { FakeChapaClient } = await import("../lib/chapa.js");
+    const { FakeChapaClient } = await import("../integrations/chapa.js");
     expect(getChapaClient()).toBeInstanceOf(FakeChapaClient);
   });
 
@@ -65,7 +65,7 @@ describe("getChapaClient", () => {
     process.env.CHAPA_SECRET_KEY = "sk_test_123";
     process.env.CHAPA_WEBHOOK_SECRET = "whsec_123";
     const { getChapaClient } = await import("./chapa.js");
-    const { HttpChapaClient } = await import("../lib/chapa.js");
+    const { HttpChapaClient } = await import("../integrations/chapa.js");
     expect(getChapaClient()).toBeInstanceOf(HttpChapaClient);
   });
 });

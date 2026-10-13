@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 
-import { Button } from "../components/ui/Button.js";
-import { StateCard } from "../components/ui/StateCard.js";
+import { Button } from "../../components/ui/Button.js";
+import { StateCard } from "../../components/ui/StateCard.js";
 import styles from "./NotFoundPage.module.css";
 
 // Figma: State — Not Found (39:1871). The same block ErrorState shows for a

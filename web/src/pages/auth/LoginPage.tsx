@@ -2,10 +2,10 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { auth, phoneToSyntheticEmail } from "../api/firebase.js";
-import { AuthLayout } from "../components/auth/AuthLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Field } from "../components/ui/Field.js";
+import { auth, phoneToSyntheticEmail } from "../../api/firebase.js";
+import { AuthLayout } from "../../components/auth/AuthLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Field } from "../../components/ui/Field.js";
 import styles from "./LoginPage.module.css";
 
 export function LoginPage() {

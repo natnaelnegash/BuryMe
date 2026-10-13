@@ -27,15 +27,26 @@ services:
     region: frankfurt
     # `backend build` is `tsc -b`, which builds the /shared project
     # reference first — no separate shared build needed here.
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @buryme/backend build
+    # `--prod=false` is required, not belt-and-braces: NODE_ENV=production
+    # below makes pnpm skip devDependencies at install time, and prisma,
+    # typescript and vite are all devDependencies. Without it the build
+    # dies on `prisma: not found` in backend's postinstall.
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm --filter @buryme/backend build
     startCommand: pnpm --filter @buryme/backend start
     # Migrations were previously a manual step in no pipeline at all.
+    # Pre-deploy commands are a paid feature, as are Blueprints themselves —
+    # on the free tier run migrations from a workstation against the
+    # database's external URL instead. See DEPLOY.md.
     preDeployCommand: pnpm db:migrate:deploy
     # Liveness, not readiness: /api/v1/health is dependency-free on purpose.
     # Pointing the host check at /api/v1/ready instead would make a Postgres
     # blip restart the instance in a loop.
     healthCheckPath: /api/v1/health
     envVars:
+      # Pinned rather than left to Render's default, so the deploy doesn't
+      # move under you when they bump it. Matches local development.
+      - key: NODE_VERSION
+        value: "22"
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
@@ -77,7 +88,17 @@ services:
   - type: web
     name: buryme-web
     runtime: static
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @buryme/web build
+    # `--filter "@buryme/web..."` installs only the web package and what it
+    # depends on (/shared), so a static site doesn't run the backend's
+    # `prisma generate` postinstall for a Prisma client it will never use.
+    #
+    # /shared must be built explicitly first. Its `dist` is gitignored, so
+    # Render clones without it, and web's build is `tsc && vite build` —
+    # plain `tsc`, which does NOT build the /shared project reference the way
+    # the backend's `tsc -b` does. Without this the first deploy fails with a
+    # wall of "implicitly has an 'any' type" errors that never mention
+    # @buryme/shared.
+    buildCommand: pnpm install --frozen-lockfile --prod=false --filter "@buryme/web..." && pnpm --filter @buryme/shared build && pnpm --filter @buryme/web build
     staticPublishPath: web/dist
     # React Router serves paths like /obligations/:id client-side, so every
     # deep link has to reach index.html or a reload 404s at the host.
@@ -86,6 +107,8 @@ services:
         source: /*
         destination: /index.html
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       # Vite inlines these at build time (web/src/api/client.ts reads
       # import.meta.env.VITE_API_BASE_URL into a module constant), so they
       # are build inputs, not runtime config: changing one needs a rebuild.

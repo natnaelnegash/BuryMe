@@ -1,12 +1,12 @@
 import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 
-import { auth } from "../api/firebase.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Avatar } from "../components/ui/Avatar.js";
-import { Button } from "../components/ui/Button.js";
-import { SummaryRow } from "../components/ui/SummaryRow.js";
-import { useAuth } from "../hooks/useAuth.js";
+import { auth } from "../../api/firebase.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Avatar } from "../../components/ui/Avatar.js";
+import { Button } from "../../components/ui/Button.js";
+import { SummaryRow } from "../../components/ui/SummaryRow.js";
+import { useAuth } from "../../hooks/useAuth.js";
 import styles from "./ProfilePage.module.css";
 
 function memberSince(iso: string): string {

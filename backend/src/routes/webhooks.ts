@@ -2,9 +2,9 @@ import { Router, raw, type Request, type RequestHandler, type Response } from "e
 
 import { getChapaClient } from "../config/chapa.js";
 import { prisma } from "../db/client.js";
-import { startTransferForPayment } from "../lib/chapaPayments.js";
-import { notifyChapaConfirmed } from "../lib/notifications.js";
-import { confirmedPaymentEffects } from "../lib/payments.js";
+import { startTransferForPayment } from "../domain/chapaPayments.js";
+import { notifyChapaConfirmed } from "../domain/notifications.js";
+import { confirmedPaymentEffects } from "../domain/payments.js";
 import { ApiError } from "../middleware/errors.js";
 
 // Chapa server-to-server callbacks (§11.1.1). Two deliberately separate
@@ -110,7 +110,7 @@ async function handleCheckout(event: ChapaEvent | null, res: Response): Promise<
 // POST /webhooks/chapa/transfer — contract: chapaTransferWebhook.
 // Payout hop confirmed: the recipient has the money. Confirm the payment
 // and apply it to the obligation (activate a disbursement; reduce / settle
-// a repayment — lib/payments.ts).
+// a repayment — domain/payments.ts).
 async function handleTransfer(event: ChapaEvent | null, res: Response): Promise<void> {
   {
     const payment = await pendingPaymentFor(event);

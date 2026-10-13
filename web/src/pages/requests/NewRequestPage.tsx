@@ -1,8 +1,8 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Note } from "../components/ui/Note.js";
-import { OptionCard } from "../components/ui/OptionCard.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Note } from "../../components/ui/Note.js";
+import { OptionCard } from "../../components/ui/OptionCard.js";
 import styles from "./NewRequestPage.module.css";
 
 // Figma: Screen — New (chooser) (49:2727). Routes into the Lend / Borrow

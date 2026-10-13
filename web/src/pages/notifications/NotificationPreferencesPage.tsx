@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
-import { ApiError } from "../api/client.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Note } from "../components/ui/Note.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { Toggle } from "../components/ui/Toggle.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useUpdateNotificationPreferences } from "../hooks/useNotifications.js";
+import { ApiError } from "../../api/client.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Note } from "../../components/ui/Note.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { Toggle } from "../../components/ui/Toggle.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useUpdateNotificationPreferences } from "../../hooks/useNotifications.js";
 import styles from "./NotificationPreferencesPage.module.css";
 
 // Figma: Screen — Notification Preferences (66:744 / host 66:774). Seven

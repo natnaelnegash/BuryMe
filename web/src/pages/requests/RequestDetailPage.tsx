@@ -2,28 +2,28 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
-import { ApiError } from "../api/client.js";
-import { ErrorState } from "../components/domain/ErrorState.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Avatar } from "../components/ui/Avatar.js";
-import { Button } from "../components/ui/Button.js";
-import { Field } from "../components/ui/Field.js";
-import { Note } from "../components/ui/Note.js";
-import { OptionCard } from "../components/ui/OptionCard.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { StatusPill } from "../components/ui/StatusPill.js";
-import { SummaryRow } from "../components/ui/SummaryRow.js";
-import { useAuth } from "../hooks/useAuth.js";
+import { ApiError } from "../../api/client.js";
+import { ErrorState } from "../../components/domain/ErrorState.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Avatar } from "../../components/ui/Avatar.js";
+import { Button } from "../../components/ui/Button.js";
+import { Field } from "../../components/ui/Field.js";
+import { Note } from "../../components/ui/Note.js";
+import { OptionCard } from "../../components/ui/OptionCard.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { StatusPill } from "../../components/ui/StatusPill.js";
+import { SummaryRow } from "../../components/ui/SummaryRow.js";
+import { useAuth } from "../../hooks/useAuth.js";
 import {
   useAcceptRequest,
   useCancelRequest,
   useCounterRequest,
   useDeclineRequest,
   useRequestQuery,
-} from "../hooks/useRequests.js";
-import { formatDate, todayIso } from "../lib/dates.js";
-import { formatMoney } from "../lib/money.js";
-import { canCancel, canRespond, requestStatusLabel } from "../lib/requests.js";
+} from "../../hooks/useRequests.js";
+import { formatDate, todayIso } from "../../lib/dates.js";
+import { formatMoney } from "../../lib/money.js";
+import { canCancel, canRespond, requestStatusLabel } from "../../lib/requests.js";
 import styles from "./RequestDetailPage.module.css";
 
 // Figma: Screen — Request Response (16:66), Screen — Counter-Proposal

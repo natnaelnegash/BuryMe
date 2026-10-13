@@ -1,19 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { ApiError } from "../api/client.js";
-import { ErrorState } from "../components/domain/ErrorState.js";
-import { ObligationCard, type ObligationDirection } from "../components/domain/ObligationCard.js";
-import { PageHeader } from "../components/layout/PageHeader.js";
-import { Button } from "../components/ui/Button.js";
-import { FilterChip } from "../components/ui/FilterChip.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { StateCard } from "../components/ui/StateCard.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useGroupExpensesQuery } from "../hooks/useGroupExpenses.js";
-import { useObligationsQuery, useRequestRepayment } from "../hooks/useObligations.js";
-import { formatSignedMoney } from "../lib/money.js";
-import { isOverdue } from "../lib/obligations.js";
+import { ApiError } from "../../api/client.js";
+import { ErrorState } from "../../components/domain/ErrorState.js";
+import {
+  ObligationCard,
+  type ObligationDirection,
+} from "../../components/domain/ObligationCard.js";
+import { PageHeader } from "../../components/layout/PageHeader.js";
+import { Button } from "../../components/ui/Button.js";
+import { FilterChip } from "../../components/ui/FilterChip.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { StateCard } from "../../components/ui/StateCard.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useGroupExpensesQuery } from "../../hooks/useGroupExpenses.js";
+import { useObligationsQuery, useRequestRepayment } from "../../hooks/useObligations.js";
+import { formatSignedMoney } from "../../lib/money.js";
+import { isOverdue } from "../../lib/obligations.js";
 import styles from "./ObligationsPage.module.css";
 
 function mutationErrorMessage(error: unknown): string | null {

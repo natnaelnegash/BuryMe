@@ -2,9 +2,10 @@ import type { Schemas } from "@buryme/shared";
 import { Router } from "express";
 
 import { prisma } from "../db/client.js";
-import { assertValidGroupExpense } from "../lib/groupExpense.js";
-import { etb, notify } from "../lib/notifications.js";
-import { createGroupExpenseInputSchema, parseBody } from "../lib/validation.js";
+import { assertValidGroupExpense } from "../domain/groupExpense.js";
+import { etb, notify } from "../domain/notifications.js";
+import { createGroupExpenseInputSchema } from "../schemas/groupExpenses.js";
+import { parseBody } from "../schemas/parse.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
 import { toGroupExpenseResponse, WITH_EXPENSE_PARTIES } from "../serializers/groupExpense.js";

@@ -1,5 +1,5 @@
 // Outbound SMS, used for Telebirr OTP delivery. The interface is the seam:
-// routes and lib/telebirrOtp.ts only ever see `SmsSender`, so the provider
+// routes and domain/telebirrOtp.ts only ever see `SmsSender`, so the provider
 // can change without touching them. AfroMessage is the first (and, for the
 // Ethiopian market, obvious) implementation.
 

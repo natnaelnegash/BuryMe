@@ -8,13 +8,13 @@ import {
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { register } from "../api/auth.js";
-import { auth, phoneToSyntheticEmail } from "../api/firebase.js";
-import { AuthLayout } from "../components/auth/AuthLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Field } from "../components/ui/Field.js";
-import { OtpInput } from "../components/ui/OtpInput.js";
-import { useAuth } from "../hooks/useAuth.js";
+import { register } from "../../api/auth.js";
+import { auth, phoneToSyntheticEmail } from "../../api/firebase.js";
+import { AuthLayout } from "../../components/auth/AuthLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Field } from "../../components/ui/Field.js";
+import { OtpInput } from "../../components/ui/OtpInput.js";
+import { useAuth } from "../../hooks/useAuth.js";
 import styles from "./RegisterPage.module.css";
 
 const RESEND_SECONDS = 60;

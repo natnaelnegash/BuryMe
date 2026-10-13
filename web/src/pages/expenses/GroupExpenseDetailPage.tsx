@@ -1,14 +1,17 @@
 import { Link, useParams } from "react-router-dom";
 
-import { ErrorState } from "../components/domain/ErrorState.js";
-import { ObligationCard, type ObligationDirection } from "../components/domain/ObligationCard.js";
-import { PageHeader } from "../components/layout/PageHeader.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useGroupExpenseQuery } from "../hooks/useGroupExpenses.js";
-import { useObligationsQuery } from "../hooks/useObligations.js";
-import { formatDate } from "../lib/dates.js";
-import { formatMoney, formatSignedMoney } from "../lib/money.js";
+import { ErrorState } from "../../components/domain/ErrorState.js";
+import {
+  ObligationCard,
+  type ObligationDirection,
+} from "../../components/domain/ObligationCard.js";
+import { PageHeader } from "../../components/layout/PageHeader.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useGroupExpenseQuery } from "../../hooks/useGroupExpenses.js";
+import { useObligationsQuery } from "../../hooks/useObligations.js";
+import { formatDate } from "../../lib/dates.js";
+import { formatMoney, formatSignedMoney } from "../../lib/money.js";
 import styles from "./GroupExpenseDetailPage.module.css";
 
 // Figma: Screen — Group Expense · Consolidated (49:2889). Back control, a

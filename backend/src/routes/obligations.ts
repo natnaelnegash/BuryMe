@@ -3,12 +3,12 @@ import { Router } from "express";
 import { prisma } from "../db/client.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
+import { parseBody } from "../schemas/parse.js";
 import {
   initiateChapaPaymentInputSchema,
-  parseBody,
   recordExternalPaymentInputSchema,
-  repaymentRequestBodySchema,
-} from "../lib/validation.js";
+} from "../schemas/payments.js";
+import { repaymentRequestBodySchema } from "../schemas/requests.js";
 import {
   assertPayable,
   assertRecipientVerified,
@@ -17,10 +17,10 @@ import {
   resolveTarget,
   systemAmount,
   WITH_PAYMENT_PARTIES,
-} from "../lib/payments.js";
-import { etb, notify } from "../lib/notifications.js";
-import { assertObligationRepayable, createRepaymentRequest } from "../lib/repayment.js";
-import { loadSchedule } from "../lib/schedule.js";
+} from "../domain/payments.js";
+import { etb, notify } from "../domain/notifications.js";
+import { assertObligationRepayable, createRepaymentRequest } from "../domain/repayment.js";
+import { loadSchedule } from "../domain/schedule.js";
 import { toObligationResponse } from "../serializers/obligation.js";
 import { toPaymentResponse } from "../serializers/payment.js";
 import { toRequestResponse } from "../serializers/request.js";
@@ -117,7 +117,7 @@ obligationsRouter.post("/:obligationId/repayment-requests", async (req, res, nex
 // POST /obligations/:obligationId/disburse — contract: disburseObligation.
 // First hop of a Through-App disbursement: the *lender* pays the principal
 // into BuryMe's merchant balance via a Chapa checkout. The checkout webhook
-// then starts the transfer to the borrower (lib/chapaPayments.ts), and the
+// then starts the transfer to the borrower (domain/chapaPayments.ts), and the
 // transfer webhook flips the obligation to Active. BuryMe never fronts the
 // money — the obligation stays Pending Disbursement until both hops land.
 obligationsRouter.post("/:obligationId/disburse", async (req, res, next) => {

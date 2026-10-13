@@ -4,7 +4,7 @@
 // reason as config/otp.ts — route tests load this module with a mocked DB
 // and no full env. Routes call `getSmsSender()` rather than constructing a
 // sender, so tests can `vi.mock("../config/sms.js")`.
-import { AfroMessageSender, ConsoleSmsSender, type SmsSender } from "../lib/sms.js";
+import { AfroMessageSender, ConsoleSmsSender, type SmsSender } from "../integrations/sms.js";
 
 let instance: SmsSender | undefined;
 

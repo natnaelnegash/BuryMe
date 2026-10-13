@@ -7,7 +7,7 @@ import { ApiError } from "../middleware/errors.js";
 // more pays the difference. This module holds the pairing and netting
 // rules; the routes stay thin.
 
-// Only open obligations can be netted. "Open" matches what `lib/payments.ts`
+// Only open obligations can be netted. "Open" matches what `domain/payments.ts`
 // treats as payable, so a settlement can never target something a payment
 // couldn't.
 const OPEN_STATUSES = ["Active", "PartiallyPaid"] as const;
@@ -133,7 +133,7 @@ export async function assertStillSettleable(obligationIds: string[]): Promise<vo
 }
 
 // What accepting does to the two obligations. Mirrors the settle branch of
-// `confirmedPaymentEffects` in lib/payments.ts so the invariant is
+// `confirmedPaymentEffects` in domain/payments.ts so the invariant is
 // identical: zero outstanding, Settled, and a settledAt stamp.
 export function settleEffects(obligationIds: string[]): Prisma.PrismaPromise<unknown>[] {
   const now = new Date();

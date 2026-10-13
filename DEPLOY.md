@@ -16,28 +16,135 @@ every open socket and stops sending reminders.
 
 ## Render
 
-[`render.yaml`](./render.yaml) is a blueprint for exactly this. Point Render
-at the repo, and it prompts for each `sync: false` secret.
+Two routes: a Blueprint, which needs a paid workspace, or creating the three
+resources by hand, which works on the free tier.
 
-Two values are circular on first deploy — set them after the services exist:
+### Option A — Blueprint (paid workspace)
 
-- `API_PUBLIC_ORIGIN` on the API = the API service's own URL.
-- `WEB_ORIGIN` on the API = the web service's URL. This is the CORS
+[`render.yaml`](./render.yaml) describes all three resources. Point Render at
+the repo and it prompts for each `sync: false` secret.
+
+### Option B — manual (works on free)
+
+Create three resources in this order. Everything below mirrors
+`render.yaml`, which stays in the repo as the reference.
+
+**1. PostgreSQL.** Name `buryme-postgres`, region Frankfurt (closest Render
+offers to Ethiopia). Copy both connection strings it gives you — the
+_internal_ one for the API service, the _external_ one for running
+migrations from your machine.
+
+**2. Web Service** for the API, from the same repo, branch `master`:
+
+| Field             | Value                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| Language          | Node                                                                                 |
+| Root Directory    | _(blank — the repo root)_                                                            |
+| Build Command     | `pnpm install --frozen-lockfile --prod=false && pnpm --filter @buryme/backend build` |
+| Start Command     | `pnpm --filter @buryme/backend start`                                                |
+| Health Check Path | `/api/v1/health`                                                                     |
+
+`tsc -b` builds the `/shared` project reference itself, so the API needs no
+separate shared build.
+
+`--prod=false` is load-bearing. `NODE_ENV=production` makes pnpm skip
+devDependencies, and `prisma`, `typescript` and `vite` are all
+devDependencies — without the flag the install succeeds and then backend's
+`postinstall` fails with `prisma: not found`.
+
+Note Render also runs its own dependency install before your build command.
+If yours omits `--prod=false` it will _remove_ the devDependencies that step
+just installed — the log shows `devDependencies: - typescript` followed by
+`prisma: not found`.
+
+Do not set `NODE_ENV` on the **static site** at all. It has no runtime
+process, so the variable cannot help there and only prunes the build tools.
+The static site's `--filter "@buryme/web..."` likewise keeps the install to
+the web package and `/shared`, skipping the backend's `prisma generate`.
+
+**3. Static Site** for the web client, same repo and branch:
+
+| Field             | Value                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Build Command     | `pnpm install --frozen-lockfile --prod=false --filter "@buryme/web..." && pnpm --filter @buryme/shared build && pnpm --filter @buryme/web build` |
+| Publish Directory | `web/dist`                                                                                                                                       |
+
+`/shared` **must** be built explicitly here. Its `dist` is gitignored, so
+Render clones without it, and web's build script is `tsc && vite build` —
+plain `tsc` does not build project references. Omit it and the build fails
+with a wall of `implicitly has an 'any' type` errors that never mention
+`@buryme/shared`.
+
+Then add the SPA rewrite under the static site's **Redirects/Rewrites**:
+source `/*`, destination `/index.html`, action **Rewrite**. The committed
+`web/public/_redirects` covers hosts that read that file; configure the rule
+in Render's UI rather than relying on it.
+
+### Migrations on the free tier
+
+Render's **pre-deploy command is a paid feature**, so `render.yaml`'s
+`preDeployCommand: pnpm db:migrate:deploy` does not apply. Run migrations
+from your machine against the database's _external_ connection string
+instead — `prisma migrate deploy` is idempotent, so re-running is harmless:
+
+```bash
+DATABASE_URL="<external connection string>" pnpm db:migrate:deploy
+```
+
+```powershell
+$env:DATABASE_URL="<external connection string>"; pnpm db:migrate:deploy
+```
+
+The inline value wins: `backend/prisma.config.ts` loads the repo-root `.env`
+through dotenv, which does not override variables already in the
+environment.
+
+Repeat this after any future migration — nothing in the free-tier pipeline
+applies them for you. Appending `&& pnpm db:migrate:deploy` to the API's
+build command is the automatic alternative, but the build environment may
+not reach the database over its internal hostname, so the external URL above
+is the dependable one.
+
+### The three circular values
+
+They can't be known before the services exist, but Render's URLs are
+predictable from the service names, so you can set all three up front and
+avoid a failed first boot:
+
+- `API_PUBLIC_ORIGIN` on the API = the API's own URL, e.g.
+  `https://buryme-api.onrender.com`. Chapa posts the per-transaction
+  callback to `<this>/api/v1/webhooks/chapa`.
+- `WEB_ORIGIN` on the API = the static site's URL. This is the CORS
   allow-list and Chapa's checkout return origin.
 - `VITE_API_BASE_URL` on the web = `<API URL>/api/v1`. It is a **build**
   input, not runtime config — Vite inlines it, so changing it needs a
   rebuild, not a restart.
 
+If the API's first deploy crashes with `Missing required environment
+variable(s)`, that is `assertRuntimeConfig()` working as intended: set the
+values and redeploy.
+
+### What the free tier costs you
+
+- **Free web services sleep after ~15 minutes idle.** A sleeping instance
+  holds no Socket.io connections and runs no reminder sweeps, and the next
+  request pays a cold start of roughly a minute. Live notifications and
+  §13.3 reminders are therefore unreliable on free — acceptable for a demo,
+  not for anything being evaluated on responsiveness.
+- **Free Postgres expires after 30 days** and is deleted. Any demo data goes
+  with it; re-create the database, re-run the migrations and re-seed.
+- No pre-deploy command and no shell access, hence the migration step above.
+
 ## Railway
 
 Railway has no blueprint format, so configure the same things by hand:
 
-|              |                                                                         |
-| ------------ | ----------------------------------------------------------------------- |
-| Build        | `pnpm install --frozen-lockfile && pnpm --filter @buryme/backend build` |
-| Start        | `pnpm --filter @buryme/backend start`                                   |
-| Pre-deploy   | `pnpm db:migrate:deploy`                                                |
-| Health check | `/api/v1/health`                                                        |
+|              |                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------ |
+| Build        | `pnpm install --frozen-lockfile --prod=false && pnpm --filter @buryme/backend build` |
+| Start        | `pnpm --filter @buryme/backend start`                                                |
+| Pre-deploy   | `pnpm db:migrate:deploy`                                                             |
+| Health check | `/api/v1/health`                                                                     |
 
 Add a Postgres plugin and reference its connection string as `DATABASE_URL`,
 then set the same env vars `render.yaml` lists. Railway has no static-site

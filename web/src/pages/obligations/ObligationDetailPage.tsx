@@ -1,28 +1,28 @@
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
-import { ApiError } from "../api/client.js";
-import { ErrorState } from "../components/domain/ErrorState.js";
-import { InstallmentRow } from "../components/domain/InstallmentRow.js";
-import { TimelineItem, type TimelineColor } from "../components/domain/TimelineItem.js";
-import { Avatar } from "../components/ui/Avatar.js";
-import { Button } from "../components/ui/Button.js";
-import { Note } from "../components/ui/Note.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { StatusPill, type PillStatus } from "../components/ui/StatusPill.js";
-import { SummaryRow } from "../components/ui/SummaryRow.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useGroupExpenseQuery } from "../hooks/useGroupExpenses.js";
-import { useObligationQuery, useRequestRepayment } from "../hooks/useObligations.js";
+import { ApiError } from "../../api/client.js";
+import { ErrorState } from "../../components/domain/ErrorState.js";
+import { InstallmentRow } from "../../components/domain/InstallmentRow.js";
+import { TimelineItem, type TimelineColor } from "../../components/domain/TimelineItem.js";
+import { Avatar } from "../../components/ui/Avatar.js";
+import { Button } from "../../components/ui/Button.js";
+import { Note } from "../../components/ui/Note.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { StatusPill, type PillStatus } from "../../components/ui/StatusPill.js";
+import { SummaryRow } from "../../components/ui/SummaryRow.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useGroupExpenseQuery } from "../../hooks/useGroupExpenses.js";
+import { useObligationQuery, useRequestRepayment } from "../../hooks/useObligations.js";
 import {
   useAcknowledgePayment,
   useDisputePayment,
   usePaymentsQuery,
-} from "../hooks/usePayments.js";
-import { nextPayable, useScheduleQuery } from "../hooks/useSchedule.js";
-import { formatDate } from "../lib/dates.js";
-import { formatMoney } from "../lib/money.js";
-import { isOverdue, obligationDirection, PILL_BY_STATUS } from "../lib/obligations.js";
+} from "../../hooks/usePayments.js";
+import { nextPayable, useScheduleQuery } from "../../hooks/useSchedule.js";
+import { formatDate } from "../../lib/dates.js";
+import { formatMoney } from "../../lib/money.js";
+import { isOverdue, obligationDirection, PILL_BY_STATUS } from "../../lib/obligations.js";
 import styles from "./ObligationDetailPage.module.css";
 
 // Figma: Obligation Detail — lender — Active / Pending Disbursement /

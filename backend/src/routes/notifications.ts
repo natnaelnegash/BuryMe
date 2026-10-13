@@ -4,14 +4,14 @@ import { prisma } from "../db/client.js";
 import {
   markNotificationsReadSchema,
   notificationPreferencesSchema,
-  parseBody,
-} from "../lib/validation.js";
+} from "../schemas/notifications.js";
+import { parseBody } from "../schemas/parse.js";
 import { requireAuth } from "../middleware/auth.js";
-import { toNotificationPreferencesResponse } from "../lib/notificationPrefs.js";
+import { toNotificationPreferencesResponse } from "../domain/notificationPrefs.js";
 import { toNotificationResponse } from "../serializers/notification.js";
 
 // In-app notification feed and read state (§6.1.5, §8.11). Notifications
-// are raised by lib/notifications.ts wherever the triggering event happens;
+// are raised by domain/notifications.ts wherever the triggering event happens;
 // this router only reads them back and marks them read.
 export const notificationsRouter = Router();
 

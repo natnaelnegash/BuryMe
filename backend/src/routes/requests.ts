@@ -1,21 +1,21 @@
 import { Router } from "express";
 
 import { prisma } from "../db/client.js";
-import { etb, notify, notifyBoth } from "../lib/notifications.js";
-import { scheduleCreateInput } from "../lib/schedule.js";
+import { etb, notify, notifyBoth } from "../domain/notifications.js";
+import { scheduleCreateInput } from "../domain/schedule.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
+import { parseBody } from "../schemas/parse.js";
 import {
+  type ProposedTerms,
   acceptRequestInputSchema,
   assertValidProposedTerms,
   counterProposalInputSchema,
   createRequestInputSchema,
-  parseBody,
-  type ProposedTerms,
-} from "../lib/validation.js";
+} from "../schemas/requests.js";
 import { toRequestResponse } from "../serializers/request.js";
 import { REPAYMENT_TYPE } from "../serializers/enums.js";
-import { assertObligationRepayable, createRepaymentRequest } from "../lib/repayment.js";
+import { assertObligationRepayable, createRepaymentRequest } from "../domain/repayment.js";
 import type { Request as RequestModel } from "../generated/prisma/client.js";
 
 export const requestsRouter = Router();
@@ -188,7 +188,7 @@ requestsRouter.post("/", async (req, res, next) => {
     });
 
     // §13.2: BR-01 to the lender, LR-01 to the borrower. Repayment requests
-    // returned above and raise RR-01 from lib/repayment.ts, which is the one
+    // returned above and raise RR-01 from domain/repayment.ts, which is the one
     // place both entry points go through.
     void notify({
       userId: request.receivingUserId,

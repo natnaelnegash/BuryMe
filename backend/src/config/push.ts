@@ -1,8 +1,8 @@
 import { getMessaging } from "firebase-admin/messaging";
 
 import { prisma } from "../db/client.js";
-import { wantsPush } from "../lib/notificationPrefs.js";
-import type { NotificationType } from "../lib/notificationCatalog.js";
+import { wantsPush } from "../domain/notificationPrefs.js";
+import type { NotificationType } from "../domain/notificationCatalog.js";
 
 // FCM push (§13). Tokens arrive via POST /auth/fcm-token (Slice 1); this is
 // the send side. Deliberately lazy — `getMessaging()` is resolved on first

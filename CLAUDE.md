@@ -87,16 +87,38 @@ build frontend screens for a slice whose backend endpoints don't exist yet.
 ```
 /backend
   src/
-    routes/       one file per resource, matching contract tags
-    middleware/    Firebase auth verification, error envelope, etc.
-    db/            Postgres schema, migrations, query layer
-    config/        env loading, Firebase Admin init, Chapa client init
+    routes/        HTTP layer — one file per resource, matching contract
+                   tags, with its *.test.ts beside it
+    schemas/       INBOUND contract mapping — zod, one file per resource
+                   (+ parse.ts: parseBody, moneySchema)
+    serializers/   OUTBOUND contract mapping — DB rows → contract shapes
+                   (+ enums.ts, money.ts for the shared conversions)
+    domain/        business rules: settlement netting, payment effects,
+                   schedule generation, the notification catalog, the
+                   §13.3 reminder sweeps
+    integrations/  outbound vendor adapters — Chapa HTTP, AfroMessage SMS
+    middleware/    Firebase auth verification, error envelope, request log
+    config/        env loading + boot validation, Firebase Admin, Socket.io,
+                   FCM, and the factories that pick a vendor client
+    db/            Prisma client construction
+    generated/     Prisma client output — GENERATED, do not edit or move
+                   (prisma/schema.prisma writes here)
 /web
   src/
     api/           typed fetch wrappers built on @buryme/shared types
-    components/    reusable UI
-    pages/         route-level screens
-    hooks/
+    hooks/         TanStack Query wrappers over api/ — the only place
+                   query keys and cache invalidation live
+    pages/         route-level screens, grouped by feature folder:
+                   auth, dashboard, users, requests, obligations, payments,
+                   expenses, settlements, notifications, profile, errors.
+                   Each page keeps its .module.css beside it.
+    components/
+      ui/          design-system primitives (Button, Field, Avatar, …)
+      domain/      BuryMe-specific compositions (ObligationCard, …)
+      layout/      AppShell, TopNav, CenteredLayout, PageHeader
+      auth/        the signed-out shell
+    lib/           presentation helpers — formatting and display gating
+    styles/        tokens.css (from the Figma variables) + global.css
 /shared
   src/
     api-types.gen.ts   GENERATED — do not hand-edit
@@ -104,6 +126,29 @@ build frontend screens for a slice whose backend endpoints don't exist yet.
 /contract
   openapi.yaml     the contract — source of truth
 ```
+
+### Which way dependencies point (backend)
+
+```
+routes/  →  schemas/   (parse the request)
+         →  domain/    (apply the rules)
+         →  serializers/ (render the response)
+
+domain/  →  config/  →  integrations/      domain/  →  db/
+```
+
+Never the reverse. `domain/` must not import from `routes/`, and
+`integrations/` must not import `domain/` or `db/` — a vendor adapter knows
+about HTTP and nothing about obligations. Vendor clients are reached through
+their `config/` factory (`getChapaClient()`, `getSmsSender()`), never
+constructed in a route: that seam is what lets the route tests run with no
+network and no keys.
+
+A new file's directory follows from one question — is it HTTP wiring
+(`routes/`), request parsing (`schemas/`), response shaping
+(`serializers/`), a business rule (`domain/`), a third-party protocol
+(`integrations/`), or process setup (`config/`)? If it looks like two of
+those, it is two files.
 
 ## Conventions
 

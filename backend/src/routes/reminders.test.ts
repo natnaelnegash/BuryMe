@@ -25,7 +25,7 @@ vi.mock("../db/client.js", () => ({
 
 const { prisma } = await import("../db/client.js");
 const { Prisma } = await import("../generated/prisma/client.js");
-const { runReminderSweep } = await import("../lib/reminders.js");
+const { runReminderSweep } = await import("../domain/reminders.js");
 
 // A fixed clock: everything below is relative to this.
 const NOW = new Date("2026-10-06T09:30:00.000Z");

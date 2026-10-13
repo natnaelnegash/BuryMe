@@ -1,17 +1,20 @@
 import { Link } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
-import { ObligationCard, type ObligationDirection } from "../components/domain/ObligationCard.js";
-import { RequestRow } from "../components/domain/RequestRow.js";
-import { Button } from "../components/ui/Button.js";
-import { StatusPill } from "../components/ui/StatusPill.js";
-import { useAuth } from "../hooks/useAuth.js";
-import { useObligationsQuery } from "../hooks/useObligations.js";
-import { useRequestsQuery } from "../hooks/useRequests.js";
-import { useSettlementSuggestionsQuery } from "../hooks/useSettlements.js";
-import { formatMoney, formatSignedMoney } from "../lib/money.js";
-import { canRespond, requestStatusLabel } from "../lib/requests.js";
-import { settleablePairs } from "../lib/settlements.js";
+import {
+  ObligationCard,
+  type ObligationDirection,
+} from "../../components/domain/ObligationCard.js";
+import { RequestRow } from "../../components/domain/RequestRow.js";
+import { Button } from "../../components/ui/Button.js";
+import { StatusPill } from "../../components/ui/StatusPill.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { useObligationsQuery } from "../../hooks/useObligations.js";
+import { useRequestsQuery } from "../../hooks/useRequests.js";
+import { useSettlementSuggestionsQuery } from "../../hooks/useSettlements.js";
+import { formatMoney, formatSignedMoney } from "../../lib/money.js";
+import { canRespond, requestStatusLabel } from "../../lib/requests.js";
+import { settleablePairs } from "../../lib/settlements.js";
 import styles from "./DashboardPage.module.css";
 
 function greetingFor(date: Date): string {

@@ -1,14 +1,15 @@
 import { Router } from "express";
 
 import { prisma } from "../db/client.js";
-import { etb, notify } from "../lib/notifications.js";
+import { etb, notify } from "../domain/notifications.js";
 import {
   assertStillSettleable,
   findEligiblePair,
   netOf,
   settleEffects,
-} from "../lib/settlement.js";
-import { createSettlementSuggestionInputSchema, parseBody } from "../lib/validation.js";
+} from "../domain/settlement.js";
+import { parseBody } from "../schemas/parse.js";
+import { createSettlementSuggestionInputSchema } from "../schemas/settlements.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
 import {

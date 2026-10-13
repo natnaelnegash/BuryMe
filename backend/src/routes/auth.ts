@@ -3,7 +3,8 @@ import { Router } from "express";
 import { prisma } from "../db/client.js";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errors.js";
-import { fcmTokenRequestSchema, parseBody, registerRequestSchema } from "../lib/validation.js";
+import { fcmTokenRequestSchema, registerRequestSchema } from "../schemas/auth.js";
+import { parseBody } from "../schemas/parse.js";
 import { toUserResponse } from "../serializers/user.js";
 
 export const authRouter = Router();

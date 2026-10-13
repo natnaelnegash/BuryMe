@@ -1,15 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { ErrorState } from "../components/domain/ErrorState.js";
-import { PersonRow } from "../components/domain/PersonRow.js";
-import { CenteredLayout } from "../components/layout/CenteredLayout.js";
-import { Button } from "../components/ui/Button.js";
-import { Field } from "../components/ui/Field.js";
-import { Note } from "../components/ui/Note.js";
-import { Spinner } from "../components/ui/Spinner.js";
-import { StateCard } from "../components/ui/StateCard.js";
-import { useSearchUsersQuery } from "../hooks/useUsers.js";
+import { ErrorState } from "../../components/domain/ErrorState.js";
+import { PersonRow } from "../../components/domain/PersonRow.js";
+import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
+import { Button } from "../../components/ui/Button.js";
+import { Field } from "../../components/ui/Field.js";
+import { Note } from "../../components/ui/Note.js";
+import { Spinner } from "../../components/ui/Spinner.js";
+import { StateCard } from "../../components/ui/StateCard.js";
+import { useSearchUsersQuery } from "../../hooks/useUsers.js";
 import styles from "./SearchPage.module.css";
 
 // Figma: Screen — User Discovery (38:1533).

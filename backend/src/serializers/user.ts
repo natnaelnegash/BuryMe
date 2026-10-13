@@ -1,7 +1,7 @@
 import type { Schemas } from "@buryme/shared";
 
 import type { TelebirrAccount, User } from "../generated/prisma/client.js";
-import { toNotificationPreferencesResponse } from "../lib/notificationPrefs.js";
+import { toNotificationPreferencesResponse } from "../domain/notificationPrefs.js";
 
 type UserWithTelebirr = User & { telebirrAccount: TelebirrAccount | null };
 
