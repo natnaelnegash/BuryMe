@@ -14,6 +14,13 @@
   flex: 1;
 }
 
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -6px;
+}
+
 .groupLabel {
   font: var(--text-field-label);
   color: var(--color-text-gray);

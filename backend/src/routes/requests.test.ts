@@ -191,6 +191,25 @@ describe("POST /requests/:id/counter", () => {
       .send({});
     expect(res.status).toBe(400);
   });
+
+  it("refuses to counter a Repayment request, which has no negotiable terms", async () => {
+    vi.mocked(prisma.request.findFirst).mockResolvedValue(
+      pendingBorrowRequest({
+        requestType: "Repayment",
+        obligationId: "obl-1",
+        proposedRepaymentType: null,
+        proposedDueDate: null,
+        purpose: null,
+      }) as never,
+    );
+    const res = await request(app)
+      .post("/api/v1/requests/req-1/counter")
+      .set(OTHER_AUTH_HEADER)
+      .send({ amount: { amount: 900, currency: "ETB" } });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("STATUS_CONFLICT");
+    expect(prisma.request.update).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /requests/:id/accept", () => {

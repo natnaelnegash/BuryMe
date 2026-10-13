@@ -4,6 +4,7 @@ import type { Schemas } from "@buryme/shared";
 import {
   disburseObligation,
   getObligation,
+  getObligationHistory,
   listObligations,
   requestRepayment,
   type ListObligationsParams,
@@ -27,6 +28,14 @@ export function useObligationQuery(obligationId: string | undefined) {
   return useQuery({
     queryKey: [...OBLIGATIONS_KEY, "detail", obligationId],
     queryFn: () => getObligation(obligationId as string),
+    enabled: obligationId !== undefined,
+  });
+}
+
+export function useObligationHistoryQuery(obligationId: string | undefined) {
+  return useQuery({
+    queryKey: [...OBLIGATIONS_KEY, "history", obligationId],
+    queryFn: () => getObligationHistory(obligationId as string),
     enabled: obligationId !== undefined,
   });
 }

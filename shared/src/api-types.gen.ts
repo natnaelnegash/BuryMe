@@ -71,7 +71,7 @@ export interface paths {
         };
         /**
          * Search registered, verified users (§6.1.3)
-         * @description Supports lookup by display name, phone, or email (§7.1.3). Returns only verified, registered accounts. Min 2 / max 100 characters (§12.2.1).
+         * @description Supports lookup by display name, phone, or email (§7.1.3). Returns only verified, registered accounts, never the caller's own — every request and expense needs a counterparty, so you are not a result. Min 2 / max 100 characters (§12.2.1).
          */
         get: operations["searchUsers"];
         put?: never;
@@ -883,7 +883,7 @@ export interface components {
             proposed_due_date: string;
             disbursement_method: components["schemas"]["DisbursementMethod"];
         };
-        /** @description Shared body for repayment-request creation, used directly by the convenience endpoint and nested in RepaymentRequestInput. */
+        /** @description Shared body for repayment-request creation, used directly by the convenience endpoint and nested in RepaymentRequestInput. No field is unconditionally required — a Lump Sum obligation needs neither. */
         RepaymentRequestBody: {
             /** @description Required (must reference a currently-Overdue installment) for Installments obligations; omit for Lump Sum. */
             installment_id?: string | null;
@@ -929,6 +929,10 @@ export interface components {
             disbursement_method: components["schemas"]["DisbursementMethod"] | null;
             /** @description Populated once status is Countered. */
             counter_proposal: components["schemas"]["CounterProposalInput"] | null;
+            /** @description The installment a Repayment request is chasing; null for Borrow/Lend and for Lump Sum repayments. */
+            installment_id: string | null;
+            /** @description The requester's message, as submitted in RepaymentRequestBody. Null for Borrow/Lend, which carry `purpose` instead. */
+            note: string | null;
             status: components["schemas"]["RequestStatus"];
             /** Format: date-time */
             created_at: string;
@@ -1092,16 +1096,16 @@ export interface components {
             counterparty_user_id: string;
         };
         ObligationHistoryEntry: {
-            history_id?: string;
-            obligation_id?: string;
-            event_type?: components["schemas"]["ObligationHistoryEventType"];
-            initiated_by?: components["schemas"]["UserSummary"];
+            history_id: string;
+            obligation_id: string;
+            event_type: components["schemas"]["ObligationHistoryEventType"];
+            initiated_by: components["schemas"]["UserSummary"];
             /** @description Serialized description of the event (amounts, previous/new values, etc.). */
-            event_detail?: {
+            event_detail: {
                 [key: string]: unknown;
             };
             /** Format: date-time */
-            occurred_at?: string;
+            occurred_at: string;
         };
         Notification: {
             notification_id: string;

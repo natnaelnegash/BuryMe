@@ -35,6 +35,13 @@ depth (Request vs. Obligation split, Chapa's two-hop payment model, etc.).
 - **Real-time: Socket.io.** Event names TBD per slice — check PRD §13 when
   the notifications slice comes up.
 - **Push: FCM**, via `POST /auth/fcm-token`.
+- **Obligation history is derived, not stored.** `GET /obligations/{id}/history`
+  is assembled in `domain/history.ts` from the rows that already record each
+  event (the originating request and its counter, payments, the settlement),
+  so there is no history table to keep in step and existing obligations have a
+  history. The cost: an event only appears if something records its time —
+  a dispute has no `disputed_at` column, so it sits at its payment's
+  timestamp. The client must not assemble this itself.
 
 ## Contract-first — the core rule
 

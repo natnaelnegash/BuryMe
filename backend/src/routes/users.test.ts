@@ -62,6 +62,16 @@ describe("GET /users/search", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([{ user_id: "uid-1", display_name: "Abel", profile_photo_url: null }]);
   });
+
+  it("never returns the caller, who cannot be their own counterparty", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
+    await request(app).get("/api/v1/users/search?q=Abel").set(AUTH_HEADER);
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: { not: "uid-1" } }),
+      }),
+    );
+  });
 });
 
 describe("GET /users/:userId", () => {

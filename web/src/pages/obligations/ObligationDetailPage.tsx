@@ -1,5 +1,4 @@
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import type { Schemas } from "@buryme/shared";
 
 import { ApiError } from "../../api/client.js";
 import { ErrorState } from "../../components/domain/ErrorState.js";
@@ -13,7 +12,11 @@ import { StatusPill, type PillStatus } from "../../components/ui/StatusPill.js";
 import { SummaryRow } from "../../components/ui/SummaryRow.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useGroupExpenseQuery } from "../../hooks/useGroupExpenses.js";
-import { useObligationQuery, useRequestRepayment } from "../../hooks/useObligations.js";
+import {
+  useObligationHistoryQuery,
+  useObligationQuery,
+  useRequestRepayment,
+} from "../../hooks/useObligations.js";
 import {
   useAcknowledgePayment,
   useDisputePayment,
@@ -21,11 +24,10 @@ import {
 } from "../../hooks/usePayments.js";
 import { nextPayable, useScheduleQuery } from "../../hooks/useSchedule.js";
 import { formatDate } from "../../lib/dates.js";
+import { historyTimeline } from "../../lib/history.js";
 import { formatMoney } from "../../lib/money.js";
 import { isOverdue, obligationDirection, PILL_BY_STATUS } from "../../lib/obligations.js";
 import styles from "./ObligationDetailPage.module.css";
-
-type Obligation = Schemas["Obligation"];
 
 function errorMessage(error: unknown): string | null {
   if (!error) return null;
@@ -58,6 +60,7 @@ export function ObligationDetailPage() {
   const { data: o, isLoading, error } = useObligationQuery(id);
   const repayment = useRequestRepayment();
   const { data: payments = [] } = usePaymentsQuery(id);
+  const { data: history = [] } = useObligationHistoryQuery(id);
   const { data: schedule } = useScheduleQuery(o);
   const { data: originatingExpense } = useGroupExpenseQuery(o?.originating_expense_id ?? undefined);
   const acknowledge = useAcknowledgePayment();
@@ -87,7 +90,18 @@ export function ObligationDetailPage() {
   const repayable = o.status === "Active" || o.status === "Partially Paid";
   const canChase =
     lender && (o.repayment_type === "Lump Sum" ? overdue : Boolean(overdueInstallment));
-  const timeline = buildTimeline(o, payments, uid);
+  const timeline = [
+    ...historyTimeline(history, uid),
+    ...(o.status === "Settled"
+      ? []
+      : [
+          {
+            title: o.status,
+            subtitle: "Current status",
+            color: STATUS_COLOR[o.status] ?? "gray",
+          },
+        ]),
+  ];
 
   const relation =
     direction === "owed" ? "They owe you" : direction === "owe" ? "You owe them" : "Between others";
@@ -361,45 +375,4 @@ export function ObligationDetailPage() {
       </div>
     </div>
   );
-}
-
-interface TimelineEntry {
-  title: string;
-  subtitle: string;
-  color: TimelineColor;
-}
-
-function buildTimeline(
-  o: Obligation,
-  payments: Schemas["Payment"][],
-  uid: string | undefined,
-): TimelineEntry[] {
-  const entries: TimelineEntry[] = [
-    { title: "Obligation created", subtitle: formatDate(o.created_at), color: "teal" },
-  ];
-  if (o.originating_request_id) {
-    entries.push({ title: "Terms agreed", subtitle: formatDate(o.created_at), color: "teal" });
-  }
-  for (const p of [...payments].reverse()) {
-    if (p.status !== "Confirmed") continue;
-    const mine = p.payer.user_id === uid;
-    entries.push({
-      title:
-        p.payment_direction === "Disbursement"
-          ? `Disbursed ${formatMoney(p.amount)}`
-          : `Repaid ${formatMoney(p.amount)}`,
-      subtitle: `${formatDate(p.confirmed_at ?? p.recorded_at)} · ${mine ? "by you" : `by ${p.payer.display_name}`}`,
-      color: p.payment_direction === "Disbursement" ? "teal" : "amber",
-    });
-  }
-  if (o.status === "Settled" && o.settled_at) {
-    entries.push({ title: "Settled", subtitle: formatDate(o.settled_at), color: "gray" });
-  } else {
-    entries.push({
-      title: o.status,
-      subtitle: "Current status",
-      color: STATUS_COLOR[o.status] ?? "gray",
-    });
-  }
-  return entries;
 }

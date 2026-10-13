@@ -202,11 +202,20 @@ requestsRouter.post("/:requestId/counter", async (req, res, next) => {
     if (request.status !== "Pending" || request.receivingUserId !== uid) {
       throw new ApiError("STATUS_CONFLICT", "This request cannot be countered right now.", 409);
     }
-    const body = parseBody(counterProposalInputSchema, req.body);
-
-    if (request.requestType !== "Repayment") {
-      assertValidProposedTerms(mergeProposedTerms(request, body));
+    // A repayment request's proposal is just the obligation, an optional
+    // installment and a note — none of which CounterProposalInput carries, and
+    // the contract defines a counter as "the same shape as the original
+    // proposal for this request's type". So there is nothing to counter.
+    if (request.requestType === "Repayment") {
+      throw new ApiError(
+        "STATUS_CONFLICT",
+        "A repayment request can only be accepted or declined.",
+        409,
+      );
     }
+
+    const body = parseBody(counterProposalInputSchema, req.body);
+    assertValidProposedTerms(mergeProposedTerms(request, body));
 
     const updated = await prisma.request.update({
       where: { id: request.id },

@@ -8,6 +8,15 @@ export function canRespond(request: Schemas["Request"], uid: string | undefined)
   );
 }
 
+// A repayment request carries no negotiable terms — its proposal is the
+// obligation, an optional installment and a note — so it can only be accepted
+// or declined. The backend refuses a counter on one with 409.
+export function canCounter(request: Schemas["Request"], uid: string | undefined): boolean {
+  return (
+    request.request_type !== "Repayment" && request.status === "Pending" && canRespond(request, uid)
+  );
+}
+
 export function canCancel(request: Schemas["Request"], uid: string | undefined): boolean {
   if (!uid) return false;
   return request.status === "Pending" && request.initiating_user.user_id === uid;

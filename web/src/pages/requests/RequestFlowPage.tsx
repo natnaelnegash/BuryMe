@@ -7,13 +7,14 @@ import { PersonRow } from "../../components/domain/PersonRow.js";
 import { CenteredLayout } from "../../components/layout/CenteredLayout.js";
 import { Button } from "../../components/ui/Button.js";
 import { Field } from "../../components/ui/Field.js";
+import { FilterChip } from "../../components/ui/FilterChip.js";
 import { Note } from "../../components/ui/Note.js";
 import { OptionCard } from "../../components/ui/OptionCard.js";
 import { Spinner } from "../../components/ui/Spinner.js";
 import { SummaryRow } from "../../components/ui/SummaryRow.js";
 import { useCreateRequest } from "../../hooks/useRequests.js";
 import { useSearchUsersQuery, useUserQuery } from "../../hooks/useUsers.js";
-import { formatDate, todayIso } from "../../lib/dates.js";
+import { formatDate, isoPlusDays, isoPlusMonths, todayIso } from "../../lib/dates.js";
 import { formatMoney } from "../../lib/money.js";
 import styles from "./RequestFlowPage.module.css";
 
@@ -49,6 +50,22 @@ const COPY: Record<Kind, Record<Step, { title: string; subtitle: string }>> = {
 
 const EMPTY_INSTALLMENT: InstallmentDraft = { amount: "", due_date: "" };
 
+const COMMON_REASONS = [
+  "Rent",
+  "School fees",
+  "Medical",
+  "Business",
+  "Transport",
+  "Emergency",
+] as const;
+
+const DUE_DATE_PRESETS = [
+  { label: "1 week", iso: () => isoPlusDays(7) },
+  { label: "2 weeks", iso: () => isoPlusDays(14) },
+  { label: "1 month", iso: () => isoPlusMonths(1) },
+  { label: "3 months", iso: () => isoPlusMonths(3) },
+] as const;
+
 export function RequestFlowPage() {
   const { kind } = useParams();
   if (kind !== "borrow" && kind !== "lend") return <Navigate to="/requests/new" replace />;
@@ -75,6 +92,10 @@ function Flow({ kind }: { kind: Kind }) {
   const [amount, setAmount] = useState("");
   const [repaymentType, setRepaymentType] = useState<RepaymentType>("Lump Sum");
   const [purpose, setPurpose] = useState("");
+  const duePresets = DUE_DATE_PRESETS.map((preset) => ({
+    label: preset.label,
+    value: preset.iso(),
+  }));
   const [dueDate, setDueDate] = useState("");
   const [installments, setInstallments] = useState<InstallmentDraft[]>([
     EMPTY_INSTALLMENT,
@@ -314,6 +335,17 @@ function Flow({ kind }: { kind: Kind }) {
             maxLength={200}
             required
           />
+          <div className={styles.chips} role="group" aria-label="Common reasons">
+            {COMMON_REASONS.map((reason) => (
+              <FilterChip
+                key={reason}
+                active={purpose === reason}
+                onClick={() => setPurpose(purpose === reason ? "" : reason)}
+              >
+                {reason}
+              </FilterChip>
+            ))}
+          </div>
           <Field
             label="Due date"
             type="date"
@@ -322,6 +354,17 @@ function Flow({ kind }: { kind: Kind }) {
             onChange={(e) => setDueDate(e.target.value)}
             required
           />
+          <div className={styles.chips} role="group" aria-label="Common due dates">
+            {duePresets.map((preset) => (
+              <FilterChip
+                key={preset.label}
+                active={dueDate === preset.value}
+                onClick={() => setDueDate(dueDate === preset.value ? "" : preset.value)}
+              >
+                {preset.label}
+              </FilterChip>
+            ))}
+          </div>
 
           {repaymentType === "Installments" && (
             <>

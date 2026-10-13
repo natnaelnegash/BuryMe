@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, type FormEvent, type ReactNode } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Schemas } from "@buryme/shared";
 
 import { ApiError } from "../../api/client.js";
@@ -23,7 +23,7 @@ import {
 } from "../../hooks/useRequests.js";
 import { formatDate, todayIso } from "../../lib/dates.js";
 import { formatMoney } from "../../lib/money.js";
-import { canCancel, canRespond, requestStatusLabel } from "../../lib/requests.js";
+import { canCancel, canCounter, canRespond, requestStatusLabel } from "../../lib/requests.js";
 import styles from "./RequestDetailPage.module.css";
 
 type Request = Schemas["Request"];
@@ -38,6 +38,53 @@ function errorMessage(error: unknown): string | null {
 function repaymentLabel(type: RepaymentType | null, schedule: Request["proposed_schedule"]) {
   if (type === "Installments") return `Installments (${schedule?.installments.length ?? 0})`;
   return type ?? "—";
+}
+
+type SummaryRowSpec = { label: string; value: ReactNode; tone?: "teal"; action?: ReactNode };
+
+// Only rows the request actually has. A repayment request has no proposed
+// type, due date, disbursement method or purpose, so listing them would print
+// a column of em dashes.
+function summaryRows(request: Request): SummaryRowSpec[] {
+  const rows: SummaryRowSpec[] = [
+    { label: "Amount", value: formatMoney(request.amount), tone: "teal" },
+  ];
+  if (request.request_type === "Repayment") {
+    rows.push({
+      label: "Applies to",
+      value: request.installment_id ? "One overdue installment" : "The full outstanding balance",
+    });
+    if (request.obligation_id) {
+      rows.push({
+        label: "Obligation",
+        value: "The debt being repaid",
+        action: (
+          <Link className={styles.rowLink} to={`/obligations/${request.obligation_id}`}>
+            View
+          </Link>
+        ),
+      });
+    }
+  }
+  if (request.proposed_repayment_type) {
+    rows.push({
+      label: "Repayment type",
+      value: repaymentLabel(request.proposed_repayment_type, request.proposed_schedule),
+    });
+  }
+  if (request.proposed_due_date) {
+    rows.push({ label: "Due date", value: formatDate(request.proposed_due_date) });
+  }
+  if (request.disbursement_method) {
+    rows.push({ label: "Disbursement", value: request.disbursement_method });
+  }
+  if (request.purpose) {
+    rows.push({ label: "Reason", value: request.purpose });
+  }
+  if (request.note) {
+    rows.push({ label: "Message", value: request.note });
+  }
+  return rows;
 }
 
 export function RequestDetailPage() {
@@ -98,6 +145,7 @@ function ResponseView({
   const isInitiator = request.initiating_user.user_id === uid;
   const other = isInitiator ? request.receiving_user : request.initiating_user;
   const respondable = canRespond(request, uid);
+  const counterable = canCounter(request, uid);
   const cancellable = canCancel(request, uid);
   const needsDisbursement = respondable && request.request_type === "Borrow";
   const busy = accept.isPending || decline.isPending || cancel.isPending;
@@ -148,24 +196,9 @@ function ResponseView({
       </div>
 
       <div className={styles.summary}>
-        <SummaryRow label="Amount" value={formatMoney(request.amount)} tone="teal" />
-        <SummaryRow
-          label="Repayment type"
-          value={repaymentLabel(request.proposed_repayment_type, request.proposed_schedule)}
-        />
-        <SummaryRow
-          label="Due date"
-          value={request.proposed_due_date ? formatDate(request.proposed_due_date) : "—"}
-          divider={Boolean(request.purpose) || Boolean(request.disbursement_method)}
-        />
-        {request.disbursement_method && (
-          <SummaryRow
-            label="Disbursement"
-            value={request.disbursement_method}
-            divider={Boolean(request.purpose)}
-          />
-        )}
-        {request.purpose && <SummaryRow label="Reason" value={request.purpose} divider={false} />}
+        {summaryRows(request).map((row, i, all) => (
+          <SummaryRow key={row.label} {...row} divider={i < all.length - 1} />
+        ))}
       </div>
 
       {needsDisbursement && (
@@ -189,7 +222,13 @@ function ResponseView({
       )}
 
       {respondable ? (
-        <Note color="indigo">You can accept, decline, or send one counter-proposal.</Note>
+        <Note color="indigo">
+          {counterable
+            ? "You can accept, decline, or send one counter-proposal."
+            : request.request_type === "Repayment"
+              ? "You can accept or decline this repayment request — there are no terms to negotiate."
+              : "You can accept or decline."}
+        </Note>
       ) : cancellable ? (
         <Note color="gray">
           Waiting for {other.display_name.split(" ")[0]} to respond. You can cancel until they do.
@@ -216,7 +255,7 @@ function ResponseView({
           >
             Decline
           </Button>
-          {request.status === "Pending" && (
+          {counterable && (
             <Button kind="secondary" block disabled={busy} onClick={onCounter}>
               Counter
             </Button>

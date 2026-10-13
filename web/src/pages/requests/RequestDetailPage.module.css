@@ -182,3 +182,13 @@
   font: var(--text-micro);
   color: var(--color-red);
 }
+
+.rowLink {
+  font: var(--text-link);
+  color: var(--color-teal);
+  text-decoration: none;
+}
+
+.rowLink:hover {
+  text-decoration: underline;
+}

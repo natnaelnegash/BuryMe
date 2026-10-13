@@ -19,8 +19,10 @@ import {
   WITH_PAYMENT_PARTIES,
 } from "../domain/payments.js";
 import { etb, notify } from "../domain/notifications.js";
+import { loadObligationHistory } from "../domain/history.js";
 import { assertObligationRepayable, createRepaymentRequest } from "../domain/repayment.js";
 import { loadSchedule } from "../domain/schedule.js";
+import { toObligationHistoryResponse } from "../serializers/history.js";
 import { toObligationResponse } from "../serializers/obligation.js";
 import { toPaymentResponse } from "../serializers/payment.js";
 import { toRequestResponse } from "../serializers/request.js";
@@ -219,6 +221,16 @@ obligationsRouter.get("/:obligationId/schedule", async (req, res, next) => {
     const obligation = await findObligationForUser(req.params.obligationId, req.auth!.uid);
     const schedule = await loadSchedule(obligation);
     res.status(200).json(toScheduleResponse(schedule));
+  } catch (err) {
+    next(err);
+  }
+});
+
+obligationsRouter.get("/:obligationId/history", async (req, res, next) => {
+  try {
+    const obligation = await findObligationForUser(req.params.obligationId, req.auth!.uid);
+    const events = await loadObligationHistory(obligation);
+    res.status(200).json(events.map((event) => toObligationHistoryResponse(event, obligation.id)));
   } catch (err) {
     next(err);
   }

@@ -28,6 +28,7 @@ usersRouter.get("/search", async (req, res, next) => {
     const { q, limit } = parseBody(searchUsersQuerySchema, req.query);
     const users = await prisma.user.findMany({
       where: {
+        id: { not: req.auth!.uid },
         OR: [
           { displayName: { contains: q, mode: "insensitive" } },
           { identifier: { contains: q, mode: "insensitive" } },

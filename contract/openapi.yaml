@@ -193,7 +193,9 @@ paths:
       summary: Search registered, verified users (§6.1.3)
       description: >
         Supports lookup by display name, phone, or email (§7.1.3). Returns only
-        verified, registered accounts. Min 2 / max 100 characters (§12.2.1).
+        verified, registered accounts, never the caller's own — every request
+        and expense needs a counterparty, so you are not a result.
+        Min 2 / max 100 characters (§12.2.1).
       operationId: searchUsers
       parameters:
         - name: q
@@ -1452,8 +1454,7 @@ components:
       additionalProperties: false
     RepaymentRequestBody:
       type: object
-      description: Shared body for repayment-request creation, used directly by the convenience endpoint and nested in RepaymentRequestInput.
-      required: [target]
+      description: Shared body for repayment-request creation, used directly by the convenience endpoint and nested in RepaymentRequestInput. No field is unconditionally required — a Lump Sum obligation needs neither.
       properties:
         installment_id:
           type: string
@@ -1501,6 +1502,8 @@ components:
           proposed_due_date,
           disbursement_method,
           counter_proposal,
+          installment_id,
+          note,
           status,
           created_at,
           responded_at,
@@ -1530,6 +1533,14 @@ components:
           allOf: [{ $ref: "#/components/schemas/CounterProposalInput" }]
           nullable: true
           description: Populated once status is Countered.
+        installment_id:
+          type: string
+          nullable: true
+          description: The installment a Repayment request is chasing; null for Borrow/Lend and for Lump Sum repayments.
+        note:
+          type: string
+          nullable: true
+          description: The requester's message, as submitted in RepaymentRequestBody. Null for Borrow/Lend, which carry `purpose` instead.
         status: { $ref: "#/components/schemas/RequestStatus" }
         created_at: { type: string, format: date-time }
         responded_at: { type: string, format: date-time, nullable: true }
@@ -1819,6 +1830,7 @@ components:
     # ── Obligation History (§8.10) ─────────────────────────────────
     ObligationHistoryEntry:
       type: object
+      required: [history_id, obligation_id, event_type, initiated_by, event_detail, occurred_at]
       properties:
         history_id: { type: string }
         obligation_id: { type: string }

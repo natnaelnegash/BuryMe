@@ -180,7 +180,7 @@ describe("POST /obligations/:id/repayment-requests", () => {
     expect(res.status).toBe(400);
   });
 
-  it("creates a repayment request when overdue", async () => {
+  it("creates a repayment request when overdue, returning the note and target", async () => {
     vi.mocked(prisma.obligation.findFirst).mockResolvedValue(baseObligation() as never);
     vi.mocked(prisma.request.create).mockResolvedValue({
       id: "req-1",
@@ -195,6 +195,8 @@ describe("POST /obligations/:id/repayment-requests", () => {
       proposedDueDate: null,
       disbursementMethod: null,
       counterProposal: null,
+      installmentId: null,
+      note: "Rent is due on Friday.",
       status: "Pending",
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       respondedAt: null,
@@ -205,9 +207,13 @@ describe("POST /obligations/:id/repayment-requests", () => {
     const res = await request(app)
       .post("/api/v1/obligations/obl-1/repayment-requests")
       .set(LENDER_AUTH)
-      .send({});
+      .send({ note: "Rent is due on Friday." });
     expect(res.status).toBe(201);
     expect(res.body.request_type).toBe("Repayment");
+    // Without these the borrower is asked to accept a demand with no stated
+    // reason and no way to tell which installment it covers.
+    expect(res.body.note).toBe("Rent is due on Friday.");
+    expect(res.body.installment_id).toBeNull();
   });
 });
 
@@ -751,5 +757,202 @@ describe("Installments payments", () => {
         data: expect.objectContaining({ installmentId: "inst-1" }),
       }),
     );
+  });
+});
+
+describe("GET /obligations/:id/history", () => {
+  function payment(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "pay-1",
+      obligationId: "obl-1",
+      amount: { toNumber: () => 500 },
+      paymentDirection: "Repayment",
+      paymentMethod: "External",
+      status: "Confirmed",
+      installmentId: null,
+      recordedByUserId: borrower.id,
+      externalMethodNote: null,
+      chapaTransactionId: null,
+      checkoutUrl: null,
+      recordedAt: new Date("2026-02-01T00:00:00.000Z"),
+      confirmedAt: new Date("2026-02-02T00:00:00.000Z"),
+      payerId: borrower.id,
+      payer: borrower,
+      recipientId: lender.id,
+      recipient: lender,
+      ...overrides,
+    };
+  }
+
+  function acceptedRequest(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "req-1",
+      requestType: "Borrow",
+      initiatingUserId: borrower.id,
+      receivingUserId: lender.id,
+      amount: { toNumber: () => 1000 },
+      purpose: "Rent",
+      proposedRepaymentType: "LumpSum",
+      proposedSchedule: null,
+      proposedDueDate: new Date("2026-06-01"),
+      disbursementMethod: null,
+      counterProposal: null,
+      installmentId: null,
+      note: null,
+      status: "Accepted",
+      createdAt: new Date("2025-12-20T00:00:00.000Z"),
+      respondedAt: new Date("2026-01-01T00:00:00.000Z"),
+      initiatingUser: borrower,
+      receivingUser: lender,
+      ...overrides,
+    };
+  }
+
+  const eventTypes = (body: unknown) => (body as { event_type: string }[]).map((e) => e.event_type);
+
+  it("returns 404 for a non-party", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(null as never);
+    const res = await request(app).get("/api/v1/obligations/obl-1/history").set(LENDER_AUTH);
+    expect(res.status).toBe(404);
+  });
+
+  it("credits a group-expense obligation to the payer, who is the lender", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(
+      baseObligation({ originatingExpenseId: "gep-1" }) as never,
+    );
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never);
+
+    const res = await request(app).get("/api/v1/obligations/obl-1/history").set(LENDER_AUTH);
+    expect(res.status).toBe(200);
+    expect(prisma.request.findUnique).not.toHaveBeenCalled();
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0]).toMatchObject({
+      history_id: "obl-1:created",
+      obligation_id: "obl-1",
+      event_type: "Created",
+      initiated_by: { user_id: lender.id },
+      occurred_at: "2026-01-01T00:00:00.000Z",
+    });
+    expect(res.body[0].event_detail).toMatchObject({
+      amount: { amount: 1000, currency: "ETB" },
+      purpose: "Rent",
+      repayment_type: "Lump Sum",
+      disbursement_method: "Already Given",
+      from_request_id: null,
+      from_expense_id: "gep-1",
+    });
+  });
+
+  it("credits a first-proposal obligation to the side that accepted", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(
+      baseObligation({ originatingRequestId: "req-1" }) as never,
+    );
+    vi.mocked(prisma.request.findUnique).mockResolvedValue(acceptedRequest() as never);
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never);
+
+    const res = await request(app).get("/api/v1/obligations/obl-1/history").set(LENDER_AUTH);
+    expect(eventTypes(res.body)).toEqual(["Created"]);
+    expect(res.body[0].initiated_by.user_id).toBe(lender.id);
+  });
+
+  it("records a counter as Terms Changed, before the creation it took effect at", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(
+      baseObligation({ originatingRequestId: "req-1" }) as never,
+    );
+    vi.mocked(prisma.request.findUnique).mockResolvedValue(
+      acceptedRequest({
+        counterProposal: {
+          amount: { amount: 1000, currency: "ETB" },
+          proposed_due_date: "2026-07-01",
+        },
+      }) as never,
+    );
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([] as never);
+
+    const res = await request(app).get("/api/v1/obligations/obl-1/history").set(LENDER_AUTH);
+    expect(eventTypes(res.body)).toEqual(["Terms Changed", "Created"]);
+    // The counter can only come from the receiving side, which leaves
+    // accepting it to the initiator.
+    expect(res.body[0].initiated_by.user_id).toBe(lender.id);
+    expect(res.body[1].initiated_by.user_id).toBe(borrower.id);
+    expect(res.body[0].event_detail).toEqual({
+      proposed: {
+        amount: { amount: 1000, currency: "ETB" },
+        repayment_type: "Lump Sum",
+        due_date: "2026-06-01",
+      },
+      agreed: { amount: { amount: 1000, currency: "ETB" }, proposed_due_date: "2026-07-01" },
+    });
+  });
+
+  it("logs a confirmed payment against its payer, at the time it was confirmed", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(baseObligation() as never);
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([payment()] as never);
+
+    const res = await request(app).get("/api/v1/obligations/obl-1/history").set(LENDER_AUTH);
+    expect(eventTypes(res.body)).toEqual(["Created", "Payment Confirmed"]);
+    expect(res.body[1]).toMatchObject({
+      history_id: "pay-1:confirmed",
+      initiated_by: { user_id: borrower.id },
+      occurred_at: "2026-02-02T00:00:00.000Z",
+    });
+    expect(res.body[1].event_detail).toMatchObject({
+      payment_id: "pay-1",
+      amount: { amount: 500, currency: "ETB" },
+      payment_direction: "Repayment",
+    });
+  });
+
+  it("logs a dispute against whoever did not record the payment", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(
+      baseObligation({ status: "Disputed" }) as never,
+    );
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([
+      payment({ status: "Disputed", confirmedAt: null, recordedByUserId: borrower.id }),
+    ] as never);
+
+    const res = await request(app).get("/api/v1/obligations/obl-1/history").set(LENDER_AUTH);
+    expect(res.body[1]).toMatchObject({
+      history_id: "pay-1:disputed",
+      event_type: "Disputed",
+      initiated_by: { user_id: lender.id },
+    });
+  });
+
+  it("leaves out a payment that is neither confirmed nor disputed", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(baseObligation() as never);
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([
+      payment({ status: "PendingAcknowledgement", confirmedAt: null }),
+      payment({ id: "pay-2", status: "Failed", confirmedAt: null }),
+    ] as never);
+
+    const res = await request(app).get("/api/v1/obligations/obl-1/history").set(LENDER_AUTH);
+    expect(eventTypes(res.body)).toEqual(["Created"]);
+  });
+
+  it("ends with Settled, naming the payment that cleared the balance", async () => {
+    vi.mocked(prisma.obligation.findFirst).mockResolvedValue(
+      baseObligation({
+        status: "Settled",
+        outstandingBalance: { toNumber: () => 0 },
+        settledAt: new Date("2026-03-01T00:00:00.000Z"),
+      }) as never,
+    );
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([
+      payment({ id: "pay-1", confirmedAt: new Date("2026-02-02T00:00:00.000Z") }),
+      payment({ id: "pay-2", confirmedAt: new Date("2026-02-20T00:00:00.000Z") }),
+    ] as never);
+
+    const res = await request(app).get("/api/v1/obligations/obl-1/history").set(LENDER_AUTH);
+    const entries = res.body as { occurred_at: string; event_detail: Record<string, unknown> }[];
+    expect(eventTypes(res.body)).toEqual([
+      "Created",
+      "Payment Confirmed",
+      "Payment Confirmed",
+      "Settled",
+    ]);
+    const occurred = entries.map((e) => e.occurred_at);
+    expect(occurred).toEqual([...occurred].sort());
+    expect(entries[3]!.event_detail).toEqual({ cleared_by_payment_id: "pay-2" });
   });
 });

@@ -20,6 +20,11 @@ export const listObligations = (params?: ListObligationsParams) => {
 export const getObligation = (obligationId: string) =>
   apiClient.get<Schemas["Obligation"]>(`/obligations/${encodeURIComponent(obligationId)}`);
 
+export const getObligationHistory = (obligationId: string) =>
+  apiClient.get<Schemas["ObligationHistoryEntry"][]>(
+    `/obligations/${encodeURIComponent(obligationId)}/history`,
+  );
+
 export const requestRepayment = (obligationId: string, body?: Schemas["RepaymentRequestBody"]) =>
   apiClient.post<Schemas["Request"]>(
     `/obligations/${encodeURIComponent(obligationId)}/repayment-requests`,

@@ -28,6 +28,8 @@ export function toRequestResponse(request: RequestWithUsers): Schemas["Request"]
       ? DISBURSEMENT_METHOD[request.disbursementMethod]!
       : null,
     counter_proposal: request.counterProposal as unknown as CounterProposal,
+    installment_id: request.installmentId,
+    note: request.note,
     status: request.status,
     created_at: request.createdAt.toISOString(),
     responded_at: request.respondedAt?.toISOString() ?? null,
