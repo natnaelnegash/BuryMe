@@ -1,0 +1,754 @@
+/* Every value grounded from Figma `Landing · Desktop` (270:588). */
+
+.page {
+  background: var(--color-white);
+}
+
+/* 1200px of content with 120px gutters at 1440, fluid below, centred above. */
+.section {
+  padding-inline: max(24px, calc((100% - 1200px) / 2));
+  padding-block: var(--py);
+}
+
+@media (max-width: 900px) {
+  .section {
+    padding-block: calc(var(--py) * 0.7);
+  }
+}
+
+/* ── Shared type ───────────────────────────────────────────────── */
+
+.eyebrow {
+  margin: 0;
+  font: 600 14px/1.2 var(--font-family);
+  letter-spacing: 1px;
+  color: var(--color-teal);
+}
+
+.h2 {
+  margin: 0;
+  font: 700 clamp(26px, 4vw, 40px) / 1.15 var(--font-family);
+  letter-spacing: -0.015em;
+  color: var(--color-text-dark);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+
+/* Heights come from the design; border-box keeps the secondary button's
+   1.5px rule inside its box, the way a Figma inside stroke behaves. */
+.btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 54px;
+  padding: 0 28px;
+  border: none;
+  border-radius: 12px;
+  font: 600 16px/1.2 var(--font-family);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btnPrimary {
+  background: var(--color-teal);
+  color: var(--color-white);
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.08);
+}
+
+.btnSecondary {
+  border: 1.5px solid var(--color-teal);
+  background: var(--color-white);
+  color: var(--color-teal);
+}
+
+.btnSecondary:hover {
+  background: var(--color-tint-teal-90);
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+
+.header {
+  --py: 0px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font: 700 20px/1.2 var(--font-family);
+  color: var(--color-teal);
+  text-decoration: none;
+}
+
+.brandDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-teal);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.navLink {
+  font: 500 15px/1.2 var(--font-family);
+  color: var(--color-text-gray);
+  text-decoration: none;
+}
+
+.navLink:hover {
+  color: var(--color-text-dark);
+}
+
+.navCta {
+  height: 44px;
+  padding: 0 24px;
+  font-size: 15px;
+}
+
+@media (max-width: 900px) {
+  .navLink {
+    display: none;
+  }
+}
+
+/* ── Hero ──────────────────────────────────────────────────────── */
+
+.hero {
+  --py: 104px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  /* Not a token: the gradient's top stop is its own value in the design. */
+  background: linear-gradient(180deg, #eaf3f1 0%, var(--color-bg) 100%);
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+  flex: 0 1 560px;
+}
+
+.h1 {
+  margin: 0;
+  font: 700 clamp(34px, 6vw, 60px) / 1.05 var(--font-family);
+  letter-spacing: -0.02em;
+  color: var(--color-text-dark);
+}
+
+.heroBody {
+  margin: 0;
+  font: 400 clamp(16px, 1.5vw, 19px) / 1.55 var(--font-family);
+  color: var(--color-text-gray);
+}
+
+.heroButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.heroVisual {
+  flex: 0 1 600px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .heroText,
+  .heroVisual {
+    flex: 1 1 auto;
+  }
+}
+
+/* ── Browser frame ─────────────────────────────────────────────── */
+
+.frame {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-white);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 14%);
+}
+
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px;
+  background: var(--color-field-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-border);
+}
+
+.shot {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* ── Value strip ───────────────────────────────────────────────── */
+
+.values {
+  --py: 72px;
+  display: flex;
+  gap: 32px;
+  background: var(--color-white);
+}
+
+.valueCard {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--color-tint-teal-90);
+  color: var(--color-teal);
+}
+
+.valueTitle {
+  margin: 0;
+  font: 600 18px/1.35 var(--font-family);
+  color: var(--color-text-dark);
+}
+
+.valueBody {
+  margin: 0;
+  font: 400 15px/1.55 var(--font-family);
+  color: var(--color-text-gray);
+}
+
+@media (max-width: 900px) {
+  .values {
+    flex-direction: column;
+  }
+}
+
+/* ── How it works ──────────────────────────────────────────────── */
+
+.how {
+  --py: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  background: var(--color-bg);
+}
+
+.steps {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.stepCard {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+}
+
+.stepText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 28px 28px 24px;
+}
+
+.stepBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-teal);
+  font: 700 15px/1 var(--font-family);
+  color: var(--color-white);
+}
+
+.stepTitle {
+  margin: 0;
+  font: 600 24px/1.3 var(--font-family);
+  color: var(--color-text-dark);
+}
+
+.stepBody {
+  margin: 0;
+  font: 400 16px/1.6 var(--font-family);
+  color: var(--color-text-gray);
+}
+
+/* Sits flush at the foot of the card, cropped from the top — the step cards
+   carry a bare screenshot, not a browser frame. */
+.stepShot {
+  display: block;
+  width: 100%;
+  margin-top: auto;
+  aspect-ratio: 382 / 175;
+  object-fit: cover;
+  object-position: top;
+}
+
+@media (max-width: 900px) {
+  .steps {
+    flex-direction: column;
+  }
+}
+
+/* ── Features ──────────────────────────────────────────────────── */
+
+.features {
+  --py: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 96px;
+  background: var(--color-white);
+}
+
+.featureRow {
+  display: flex;
+  align-items: center;
+  gap: 64px;
+}
+
+.featureText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.featureVisual {
+  flex: 0 1 600px;
+  min-width: 0;
+}
+
+/* Rows alternate which side the mockup sits on. */
+.featureRowReversed .featureText {
+  order: 2;
+}
+
+.featureTitle {
+  margin: 0;
+  font: 600 clamp(20px, 2.4vw, 24px) / 1.3 var(--font-family);
+  color: var(--color-text-dark);
+}
+
+.featureBody {
+  margin: 0;
+  font: 400 16px/1.6 var(--font-family);
+  color: var(--color-text-gray);
+}
+
+@media (max-width: 900px) {
+  .features {
+    gap: 64px;
+  }
+
+  .featureRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 28px;
+  }
+
+  /* Stacked, the text always leads — the alternation is a desktop rhythm. */
+  .featureRowReversed .featureText {
+    order: 0;
+  }
+
+  .featureVisual {
+    flex: 1 1 auto;
+  }
+}
+
+/* ── Signature balance ─────────────────────────────────────────── */
+
+.balance {
+  --py: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: var(--color-bg);
+  text-align: center;
+}
+
+.balanceSub {
+  margin: 0;
+  font: 400 clamp(16px, 1.5vw, 19px) / 1.55 var(--font-family);
+  color: var(--color-text-gray);
+}
+
+.balanceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 900px;
+  margin-top: 16px;
+  padding: 28px 32px;
+  border-radius: var(--radius-card);
+  background: var(--color-white);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 8%);
+  text-align: left;
+}
+
+.figures {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.figureCentre {
+  align-items: center;
+}
+
+.figureEnd {
+  align-items: flex-end;
+}
+
+.figureLabel {
+  font: 500 14px/1.2 var(--font-family);
+  color: var(--color-text-gray);
+}
+
+.figureValue {
+  font: 700 clamp(22px, 3vw, 32px) / 1.2 var(--font-family);
+  color: var(--color-text-dark);
+}
+
+.figureTeal {
+  color: var(--color-teal);
+}
+
+.figureAmber {
+  color: var(--color-amber);
+}
+
+.bar {
+  display: flex;
+  overflow: hidden;
+  height: 14px;
+  border-radius: 7px;
+}
+
+.barOwed {
+  background: var(--color-teal);
+}
+
+.barOwe {
+  background: var(--color-amber);
+}
+
+/* ── Trust & safety ────────────────────────────────────────────── */
+
+.trust {
+  --py: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  background: var(--color-teal);
+}
+
+.trustEyebrow {
+  color: var(--color-tint-teal-85);
+}
+
+.trustHeading {
+  color: var(--color-white);
+}
+
+.trustRow {
+  display: flex;
+  gap: 32px;
+}
+
+.trustItem {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.trustChip {
+  background: rgb(255 255 255 / 16%);
+  color: var(--color-white);
+}
+
+.trustTitle {
+  margin: 0;
+  font: 600 18px/1.2 var(--font-family);
+  color: var(--color-white);
+}
+
+.trustBody {
+  margin: 0;
+  font: 400 14px/1.55 var(--font-family);
+  color: rgb(255 255 255 / 80%);
+}
+
+@media (max-width: 900px) {
+  .trustRow {
+    flex-wrap: wrap;
+  }
+
+  .trustItem {
+    flex: 1 1 calc(50% - 16px);
+  }
+}
+
+@media (max-width: 560px) {
+  .trustItem {
+    flex: 1 1 100%;
+  }
+}
+
+/* ── FAQ ───────────────────────────────────────────────────────── */
+
+.faq {
+  --py: 112px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  background: var(--color-bg);
+}
+
+.faqList {
+  width: 100%;
+  max-width: 760px;
+}
+
+/* Each item carries a full border and the next one laps over it, which is how
+   the design draws one outline with dividers inside. */
+.faqItem {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 0;
+  border: 1px solid var(--color-border);
+}
+
+.faqItem + .faqItem {
+  margin-top: -1px;
+}
+
+.faqQuestion {
+  margin: 0;
+  font: 600 18px/1.35 var(--font-family);
+  color: var(--color-text-dark);
+}
+
+.faqAnswer {
+  margin: 0;
+  font: 400 15px/1.55 var(--font-family);
+  color: var(--color-text-gray);
+}
+
+/* ── Platforms ─────────────────────────────────────────────────── */
+
+.platforms {
+  --py: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-white);
+  text-align: center;
+}
+
+.platformsSub {
+  margin: 0;
+  font: 400 clamp(16px, 1.5vw, 19px) / 1.55 var(--font-family);
+  color: var(--color-text-gray);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+.badge {
+  padding: 13px 26px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: var(--color-field-bg);
+  font: 600 15px/1.2 var(--font-family);
+  color: var(--color-text-dark);
+}
+
+/* ── Final CTA ─────────────────────────────────────────────────── */
+
+.cta {
+  --py: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: var(--color-teal);
+  text-align: center;
+}
+
+.ctaHeading {
+  color: var(--color-white);
+}
+
+.ctaSub {
+  margin: 0;
+  font: 400 clamp(16px, 1.5vw, 19px) / 1.55 var(--font-family);
+  color: rgb(255 255 255 / 85%);
+}
+
+.btnInverse {
+  height: 51px;
+  background: var(--color-white);
+  color: var(--color-teal);
+}
+
+.btnInverse:hover {
+  background: var(--color-tint-teal-90);
+}
+
+/* ── Footer ────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding-block: 56px 40px;
+  background: var(--color-text-dark);
+}
+
+.footerTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 80px;
+}
+
+.footerBrand {
+  display: flex;
+  flex: 0 1 300px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footerWordmark {
+  font: 700 20px/1.2 var(--font-family);
+  color: var(--color-white);
+}
+
+.footerBlurb {
+  margin: 0;
+  font: 400 14px/1.55 var(--font-family);
+  color: rgb(255 255 255 / 55%);
+}
+
+.footerCol {
+  display: flex;
+  flex: 0 1 160px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footerColTitle {
+  margin: 0;
+  font: 600 14px/1.2 var(--font-family);
+  color: var(--color-white);
+}
+
+.footerItem {
+  font: 400 14px/1.2 var(--font-family);
+  color: rgb(255 255 255 / 55%);
+  text-decoration: none;
+}
+
+a.footerItem:hover {
+  color: var(--color-white);
+}
+
+.footerCopy {
+  font: 400 13px/1.2 var(--font-family);
+  color: rgb(255 255 255 / 50%);
+}
+
+@media (max-width: 900px) {
+  .footerTop {
+    flex-wrap: wrap;
+    gap: 40px;
+  }
+
+  .footerBrand {
+    flex: 1 1 100%;
+  }
+
+  .footerCol {
+    flex: 1 1 calc(50% - 20px);
+  }
+}
+
+@media (max-width: 560px) {
+  .footerCol {
+    flex: 1 1 100%;
+  }
+}

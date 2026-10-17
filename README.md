@@ -13,6 +13,22 @@ through Firebase, and notifications through Socket.io plus FCM.
 Web-first; mobile (Flutter) follows once the web + backend surface is
 stable.
 
+![The BuryMe dashboard: a balance bar showing what you are owed against what you owe, a list of requests needing your response, and recent obligations](web/src/assets/landing/dashboard.png)
+
+## Screens
+
+One obligation, from proposal to settled.
+
+|                                                                                                                                                                |                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![A borrow request awaiting a response](web/src/assets/landing/request-response.png)<br>**Agree.** The other side accepts, declines, or counters once.         | ![The counter-proposal screen](web/src/assets/landing/counter-proposal.png)<br>**Negotiate.** One counter, then the terms are fixed.               |
+| ![An obligation detail screen](web/src/assets/landing/obligation-detail.png)<br>**Track.** Outstanding balance, agreed terms, and an append-only activity log. | ![The payment screen](web/src/assets/landing/make-payment.png)<br>**Settle.** Pay through Telebirr via Chapa, or record a cash payment.            |
+| ![A group expense split between three people](web/src/assets/landing/group-expense.png)<br>**Split.** One bill becomes a bilateral obligation per participant. | ![A suggested settlement netting two obligations](web/src/assets/landing/settlement.png)<br>**Net off.** Mutual debts clear with a single payment. |
+
+These files live under `web/src/assets/landing/` rather than in a docs folder
+because the landing page at `/welcome` renders the same images — one copy, one
+place to update.
+
 ## Stack
 
 |           |                                                                 |
@@ -29,6 +45,7 @@ stable.
 ```
 /backend    Express/Node API — all business logic lives here
 /web        React web client — thin, consumes the API only
+            (public landing page at /welcome; everything else needs auth)
 /shared     Generated TypeScript types from contract/openapi.yaml
 /contract   openapi.yaml — the source of truth for the API surface
 ```
@@ -75,7 +92,7 @@ pnpm lint                           # ESLint
 pnpm format                         # Prettier, write
 pnpm format:check                   # Prettier, verify
 pnpm build                          # build every package
-pnpm --filter @buryme/backend test  # Vitest — the whole suite lives here
+pnpm test                           # Vitest, every package
 ```
 
 ## Working with the contract
@@ -135,12 +152,11 @@ file records how far it is scoped.
 All nine slices in CLAUDE.md are implemented end to end — auth, users,
 requests and negotiation, disbursement, payments, schedules, group expenses,
 settlements, and notifications (feed, real-time, push, and the §13.3 reminder
-scheduler). 152 backend tests.
+scheduler) — plus the obligation history endpoint and the marketing landing
+page. 171 backend tests and 37 web tests.
 
 Not done yet:
 
-- `GET /obligations/{id}/history` (§8.10) — in the contract, in no slice, and
-  not implemented.
 - Chapa has never run against the live API. Going live needs a public webhook
   URL (`API_PUBLIC_ORIGIN`), and the `bank_code`, signature header and payload
   field names confirmed against the real service.
@@ -152,11 +168,12 @@ Not done yet:
 
 ## Known rough edges
 
-- **`pnpm test` at the repo root fails.** `@buryme/web` declares `vitest run`
-  but has no test files, and Vitest exits non-zero for that, taking the
-  recursive script down with it. The backend suite passes — run
-  `pnpm --filter @buryme/backend test` until web gets tests or
-  `--passWithNoTests`.
-- No web tests at all, and FCM push is inert on the web client (nothing
-  registers a token and there is no service worker). The Socket.io layer
-  covers real-time on web; push matters for the Flutter app.
+- **FCM push is inert on the web client** — nothing registers a token and
+  there is no service worker. The Socket.io layer covers real-time on web;
+  push matters for the Flutter app.
+- **Web test coverage is narrow.** The 37 web tests cover `web/src/lib/`, the
+  pure formatting and display-gating helpers. Components and hooks are
+  untested; the backend suite carries the behaviour.
+- **The landing page's small-screen layout is derived, not designed.** The
+  Figma frame is desktop-only (1440), so the breakpoints below it are a
+  judgement call and worth a look before launch.

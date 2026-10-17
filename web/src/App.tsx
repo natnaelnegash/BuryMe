@@ -9,6 +9,7 @@ import { DisbursementPage } from "./pages/payments/DisbursementPage.js";
 import { GroupExpenseDetailPage } from "./pages/expenses/GroupExpenseDetailPage.js";
 import { GroupExpenseFlowPage } from "./pages/expenses/GroupExpenseFlowPage.js";
 import { MakePaymentPage } from "./pages/payments/MakePaymentPage.js";
+import { LandingPage } from "./pages/landing/LandingPage.js";
 import { LoginPage } from "./pages/auth/LoginPage.js";
 import { NewRequestPage } from "./pages/requests/NewRequestPage.js";
 import { NotFoundPage } from "./pages/errors/NotFoundPage.js";
@@ -42,6 +43,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <Routes>
+      <Route path="/welcome" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route
